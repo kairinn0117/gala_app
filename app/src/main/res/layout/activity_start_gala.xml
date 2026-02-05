@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <!-- Header: Trip Title -->
+    <TextView
+        android:id="@+id/tvTripTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Trip Name"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Progress -->
+    <TextView
+        android:id="@+id/tvProgress"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Destination 1 of 5"
+        android:textSize="13sp"
+        android:layout_marginTop="6dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTripTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Current Destination Card -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardCurrentDestination"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:layout_constraintTop_toBottomOf="@id/tvProgress"
+        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Current Destination"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Name -->
+                <TextView
+                    android:id="@+id/tvDestName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Destination Name"
+                    android:textStyle="bold"
+                    android:textSize="18sp"/>
+
+                <!-- Type -->
+                <TextView
+                    android:id="@+id/tvDestType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Type: Tourist Spot"
+                    android:layout_marginTop="6dp"/>
+
+                <!-- Location -->
+                <TextView
+                    android:id="@+id/tvDestLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Location: Boracay, Aklan"
+                    android:layout_marginTop="6dp"/>
+
+                <!-- Date & Time -->
+                <TextView
+                    android:id="@+id/tvDestDateTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Date and Time: Feb 5, 2026 • 9:00 AM"
+                    android:layout_marginTop="6dp"/>
+
+                <!-- Budget -->
+                <TextView
+                    android:id="@+id/tvDestBudget"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Budget: ₱1500"
+                    android:layout_marginTop="6dp"/>
+
+                <!-- Description label -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Description"
+                    android:textStyle="bold"
+                    android:layout_marginTop="12dp"/>
+
+                <!-- Description content -->
+                <TextView
+                    android:id="@+id/tvDestDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="(Description here...)"
+                    android:layout_marginTop="6dp"/>
+
+            </LinearLayout>
+        </ScrollView>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Bottom bar: buttons -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/btnEndTrip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="End Trip"/>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <Button
+            android:id="@+id/btnDoneNext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Done / Next"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
