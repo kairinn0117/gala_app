@@ -2,4 +2,36 @@
     <string name="app_name">galafunctions</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string-array name="destination_types">
+        <item>Hotel</item>
+        <item>Tourist Spot</item>
+        <item>Food</item>
+    </string-array>
+    <string-array name="trip_categories">
+        <item>GALA</item>
+        <item>WORK</item>
+        <item>ERRANDS</item>
+        <item>OTHER</item>
+    </string-array>
+
+    <string-array name="ph_cities">
+        <item>Select city</item>
+        <item>Manila</item>
+        <item>Quezon City</item>
+        <item>Makati</item>
+        <item>Pasay</item>
+        <item>Taguig</item>
+        <item>Mandaluyong</item>
+        <item>Pasig</item>
+        <item>San Juan</item>
+        <item>Marikina</item>
+        <item>Caloocan</item>
+        <item>Malabon</item>
+        <item>Navotas</item>
+        <item>Valenzuela</item>
+        <item>Parañaque</item>
+        <item>Las Piñas</item>
+        <item>Muntinlupa</item>
+        <item>Pateros</item>
+    </string-array>
 </resources>

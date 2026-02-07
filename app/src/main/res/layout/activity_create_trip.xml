@@ -7,11 +7,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Top cover image (wide) -->
     <ImageView
         android:id="@+id/imgCover"
         android:layout_width="0dp"
-        android:layout_height="220dp"
+        android:layout_height="140dp"
         android:scaleType="centerCrop"
         android:src="@drawable/ic_launcher_background"
         app:layout_constraintTop_toTopOf="parent"
@@ -53,14 +52,67 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp"/>
 
+            <!-- Trip category/type -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Trip Category"
+                android:layout_marginTop="4dp"/>
+
+            <Spinner
+                android:id="@+id/spTripCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:entries="@array/trip_categories"
+                tools:ignore="TouchTargetSizeCheck"/>
+
+            <!-- Template toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Template mode"/>
+
+                <Switch
+                    android:id="@+id/swIsTemplate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvTemplateHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="If enabled, date/time can be optional and you can activate this trip later."
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:alpha="0.75"/>
+
             <EditText
                 android:id="@+id/etTripName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Trip name"
                 android:inputType="textPersonName"
-                android:minHeight="48dp" />
+                android:minHeight="48dp"
+                android:layout_marginTop="10dp"/>
 
+            <!-- City picker (city only) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="City"
+                android:layout_marginTop="10dp"/>
+
+            <!-- Keep your location + maps row (optional / can be used later for maps) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -72,7 +124,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Location"
+                    android:hint="Location "
                     android:inputType="text"/>
 
                 <Button
@@ -91,6 +143,45 @@
                 android:hint="No. of people"
                 android:inputType="number"
                 android:minHeight="48dp" />
+
+            <!-- Budget toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Enable budgeting"/>
+
+                <Switch
+                    android:id="@+id/swBudgetEnabled"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- Budget section (show/hide in Java) -->
+            <LinearLayout
+                android:id="@+id/layoutBudgetSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <EditText
+                    android:id="@+id/etTripBudget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Trip budget (optional)"
+                    android:inputType="numberDecimal"
+                    android:minHeight="48dp"/>
+            </LinearLayout>
 
             <!-- Date and Time row -->
             <LinearLayout
@@ -120,6 +211,15 @@
                     android:hint="Time"
                     tools:ignore="TouchTargetSizeCheck" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvDateTimeHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Date/time can be optional in template mode."
+                android:textSize="12sp"
+                android:layout_marginTop="4dp"
+                android:alpha="0.75"/>
 
             <EditText
                 android:id="@+id/etDescription"

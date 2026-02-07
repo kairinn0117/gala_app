@@ -4,9 +4,13 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -29,11 +33,17 @@ import java.util.UUID;
 
 public class CreateTrip extends AppCompatActivity {
 
-    // Use the same IDs you already have in XML
+    // Existing
     private ImageView imgCoverPick;                 // R.id.imgCover
     private Button btnChangeCover;                  // R.id.btnChangeCover
     private EditText etTripName, etLocation, etPeopleCount, etTripDate, etTripTime, etTripDescription;
     private Button btnCreateTrip, btnCancelTrip;
+
+    // Updated (removed spCity)
+    private Spinner spTripCategory;
+    private Switch swIsTemplate, swBudgetEnabled;
+    private LinearLayout layoutBudgetSection;
+    private EditText etTripBudget;
 
     private Uri selectedImageUri = null;
 
@@ -49,18 +59,21 @@ public class CreateTrip extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_create_trip);
 
-        // If your layout doesn't have @id/main, either add it in XML root OR remove this listener.
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        // Keep this only if your root has android:id="@+id/main"
+        View main = findViewById(R.id.main);
+        if (main != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(main, (v, insets) -> {
+                Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+                return insets;
+            });
+        }
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
 
-        // IMPORTANT: assign to CLASS FIELDS (no local variables)
+        // Existing views
         imgCoverPick = findViewById(R.id.imgCover);
         btnChangeCover = findViewById(R.id.btnChangeCover);
 
@@ -68,13 +81,19 @@ public class CreateTrip extends AppCompatActivity {
         etLocation = findViewById(R.id.etLocation);
         etPeopleCount = findViewById(R.id.etPeopleCount);
 
-        // Your XML uses etDate / etTime / etDescription (based on your code)
         etTripDate = findViewById(R.id.etDate);
         etTripTime = findViewById(R.id.etTime);
         etTripDescription = findViewById(R.id.etDescription);
 
         btnCreateTrip = findViewById(R.id.btnCreateTrip);
         btnCancelTrip = findViewById(R.id.btnCancelTrip);
+
+        // Updated views
+        spTripCategory = findViewById(R.id.spTripCategory);
+        swIsTemplate = findViewById(R.id.swIsTemplate);
+        swBudgetEnabled = findViewById(R.id.swBudgetEnabled);
+        layoutBudgetSection = findViewById(R.id.layoutBudgetSection);
+        etTripBudget = findViewById(R.id.etTripBudget);
 
         // Image picker launcher
         pickImageLauncher = registerForActivityResult(
@@ -91,6 +110,29 @@ public class CreateTrip extends AppCompatActivity {
         imgCoverPick.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
         btnChangeCover.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
+        // Template switch behavior (date/time optional when template)
+        swIsTemplate.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // Optional UI behavior: disable/enable date/time fields
+            etTripDate.setEnabled(!isChecked);
+            etTripTime.setEnabled(!isChecked);
+
+            if (isChecked) {
+                etTripDate.setError(null);
+                etTripTime.setError(null);
+            }
+        });
+
+        // Budget switch behavior (show/hide budget section)
+        swBudgetEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                layoutBudgetSection.setVisibility(View.VISIBLE);
+            } else {
+                layoutBudgetSection.setVisibility(View.GONE);
+                etTripBudget.setText("");
+                etTripBudget.setError(null);
+            }
+        });
+
         // Cancel
         btnCancelTrip.setOnClickListener(v -> finish());
 
@@ -106,26 +148,81 @@ public class CreateTrip extends AppCompatActivity {
 
         String uid = auth.getCurrentUser().getUid();
 
+        // Spinner value
+        String tripCategory = (spTripCategory.getSelectedItem() != null)
+                ? spTripCategory.getSelectedItem().toString().trim()
+                : "OTHER";
+
+        boolean isTemplate = swIsTemplate.isChecked();
+        boolean budgetEnabled = swBudgetEnabled.isChecked();
+
+        // Text fields
         String tripName = etTripName.getText().toString().trim();
-        String location = etLocation.getText().toString().trim();
+        String location = etLocation.getText().toString().trim(); // REQUIRED now
         String peopleStr = etPeopleCount.getText().toString().trim();
         String date = etTripDate.getText().toString().trim();
         String time = etTripTime.getText().toString().trim();
         String description = etTripDescription.getText().toString().trim();
 
-        // Basic validation
-        if (TextUtils.isEmpty(tripName)) { etTripName.setError("Required"); return; }
-        if (TextUtils.isEmpty(location)) { etLocation.setError("Required"); return; }
-        if (TextUtils.isEmpty(date)) { etTripDate.setError("Required"); return; }
-        if (TextUtils.isEmpty(time)) { etTripTime.setError("Required"); return; }
-        if (TextUtils.isEmpty(peopleStr)) { etPeopleCount.setError("Required"); return; }
+        String budgetStr = etTripBudget.getText().toString().trim();
+
+        // ---------- Validation ----------
+        if (TextUtils.isEmpty(tripName)) {
+            etTripName.setError("Required");
+            return;
+        }
+
+        if (TextUtils.isEmpty(location)) {
+            etLocation.setError("Required");
+            return;
+        }
+
+        if (TextUtils.isEmpty(peopleStr)) {
+            etPeopleCount.setError("Required");
+            return;
+        }
 
         int peopleCount;
         try {
             peopleCount = Integer.parseInt(peopleStr);
+            if (peopleCount <= 0) {
+                etPeopleCount.setError("Must be at least 1");
+                return;
+            }
         } catch (Exception e) {
             etPeopleCount.setError("Number only");
             return;
+        }
+
+        // Date/time required only if NOT template
+        if (!isTemplate) {
+            if (TextUtils.isEmpty(date)) {
+                etTripDate.setError("Required");
+                return;
+            }
+            if (TextUtils.isEmpty(time)) {
+                etTripTime.setError("Required");
+                return;
+            }
+        }
+
+        Double tripBudget = null;
+        if (budgetEnabled) {
+            // If enabled, require a valid number
+            if (TextUtils.isEmpty(budgetStr)) {
+                etTripBudget.setError("Required");
+                return;
+            }
+            try {
+                tripBudget = Double.parseDouble(budgetStr);
+                if (tripBudget < 0) {
+                    etTripBudget.setError("Must be 0 or more");
+                    return;
+                }
+            } catch (Exception e) {
+                etTripBudget.setError("Number only");
+                return;
+            }
         }
 
         btnCreateTrip.setEnabled(false);
@@ -133,21 +230,26 @@ public class CreateTrip extends AppCompatActivity {
         // Create tripId now
         String tripId = db.collection("tmp").document().getId();
 
-        // Make final copies for lambda
+        // If no image picked, just save Firestore without cover_url
+        if (selectedImageUri == null) {
+            saveTripToFirestore(uid, tripId, tripName, tripCategory, location,
+                    peopleCount, isTemplate, budgetEnabled, tripBudget, date, time, description, null);
+            return;
+        }
+
+        // ---- Make final copies for lambda ----
         final String fUid = uid;
         final String fTripId = tripId;
         final String fTripName = tripName;
+        final String fTripCategory = tripCategory;
         final String fLocation = location;
         final int fPeopleCount = peopleCount;
+        final boolean fIsTemplate = isTemplate;
+        final boolean fBudgetEnabled = budgetEnabled;
+        final Double fTripBudget = tripBudget;
         final String fDate = date;
         final String fTime = time;
         final String fDescription = description;
-
-        // If no image picked, just save Firestore without cover_url
-        if (selectedImageUri == null) {
-            saveTripToFirestore(fUid, fTripId, fTripName, fLocation, fPeopleCount, fDate, fTime, fDescription, null);
-            return;
-        }
 
         // Upload image to Storage
         String fileName = "cover_" + UUID.randomUUID();
@@ -165,7 +267,9 @@ public class CreateTrip extends AppCompatActivity {
                 })
                 .addOnSuccessListener(downloadUri -> {
                     String coverUrl = downloadUri.toString();
-                    saveTripToFirestore(fUid, fTripId, fTripName, fLocation, fPeopleCount, fDate, fTime, fDescription, coverUrl);
+                    saveTripToFirestore(fUid, fTripId, fTripName, fTripCategory, fLocation,
+                            fPeopleCount, fIsTemplate, fBudgetEnabled, fTripBudget,
+                            fDate, fTime, fDescription, coverUrl);
                 })
                 .addOnFailureListener(e -> {
                     btnCreateTrip.setEnabled(true);
@@ -177,8 +281,12 @@ public class CreateTrip extends AppCompatActivity {
             String uid,
             String tripId,
             String tripName,
+            String tripCategory,
             String location,
             int peopleCount,
+            boolean isTemplate,
+            boolean budgetEnabled,
+            Double tripBudget,
             String date,
             String time,
             String description,
@@ -186,12 +294,31 @@ public class CreateTrip extends AppCompatActivity {
     ) {
         Map<String, Object> trip = new HashMap<>();
         trip.put("trip_name", tripName);
+        trip.put("trip_category", tripCategory);
+
+        // Location is REQUIRED now (text + optional maps later)
         trip.put("location", location);
+
         trip.put("people_count", peopleCount);
+
+        trip.put("is_template", isTemplate);
+        trip.put("budget_enabled", budgetEnabled);
+
+        if (budgetEnabled && tripBudget != null) {
+            trip.put("trip_budget", tripBudget);
+            // Optional tracking fields for later:
+            trip.put("total_spent", 0.0);
+        }
+
+        // If template, date/time can be empty; still store keys for consistency
         trip.put("date", date);
         trip.put("time", time);
+
         trip.put("description", description);
+
+        // Status stays PLANNED for both; StartGala later will set IN_PROGRESS
         trip.put("status", "PLANNED");
+
         trip.put("created_at", Timestamp.now());
 
         if (coverUrl != null) trip.put("cover_url", coverUrl);

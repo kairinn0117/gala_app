@@ -49,6 +49,7 @@
                 android:id="@+id/spDestinationType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:entries="@array/destination_types"
                 android:layout_marginTop="6dp"
                 android:minHeight="48dp" />
 
@@ -75,39 +76,57 @@
                     android:layout_marginStart="8dp"/>
             </LinearLayout>
 
-            <EditText
-                android:id="@+id/etDestinationBudget"
+            <!-- Budget section (show/hide in Java based on trip budget_enabled) -->
+            <LinearLayout
+                android:id="@+id/layoutDestinationBudget"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Budget (e.g., 1500)"
+                android:orientation="vertical"
                 android:layout_marginTop="10dp"
-                android:inputType="numberDecimal"/>
+                android:visibility="gone"
+                tools:visibility="visible">
 
-            <!-- Date and Time row -->
+                <EditText
+                    android:id="@+id/etDestinationBudget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Budget (e.g., 1500)"
+                    android:inputType="numberDecimal"
+                    android:minHeight="48dp"/>
+            </LinearLayout>
+
+            <!-- Time In and Time Out (both optional) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Time (optional)"
+                android:layout_marginTop="10dp"/>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="6dp">
 
                 <EditText
-                    android:id="@+id/etDestinationDate"
+                    android:id="@+id/etTimeIn"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Date"
+                    android:hint="Time In"
                     android:focusable="false"
-                    android:clickable="true"/>
+                    android:clickable="true"
+                    tools:ignore="TouchTargetSizeCheck" />
 
                 <EditText
-                    android:id="@+id/etDestinationTime"
+                    android:id="@+id/etTimeOut"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
-                    android:clickable="true"
+                    android:hint="Time Out"
                     android:focusable="false"
-                    android:hint="Time"
+                    android:clickable="true"
                     tools:ignore="TouchTargetSizeCheck" />
             </LinearLayout>
 

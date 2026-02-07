@@ -8,16 +8,13 @@
     android:layout_height="match_parent">
 
     <!-- Cover Image -->
-
-    <!-- Edit Button -->
     <ImageView
         android:id="@+id/imgCover"
-        android:layout_width="409dp"
-        android:layout_height="199dp"
+        android:layout_width="0dp"
+        android:layout_height="220dp"
         android:scaleType="centerCrop"
         android:src="@drawable/ic_launcher_background"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -36,25 +33,31 @@
         android:layout_height="wrap_content"
         android:text="Back"
         android:layout_margin="12dp"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/imgCover"
         app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Trip Info (inside image, right side) -->
+    <!-- Anchor below top buttons -->
+    <View
+        android:id="@+id/topButtonsAnchor"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/btnBackTrip"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Destinations label -->
-
+    <!-- Trip Info overlay (won't overlap the top buttons anymore) -->
     <LinearLayout
         android:id="@+id/layoutTripInfo"
-        android:layout_width="412dp"
-        android:layout_height="94dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:orientation="vertical"
         android:padding="12dp"
-        app:layout_constraintBottom_toBottomOf="@id/imgCover"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        android:layout_margin="12dp"
+        android:background="#66000000"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnEditTrip"
-        app:layout_constraintVertical_bias="1.0">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topButtonsAnchor"
+        app:layout_constraintBottom_toBottomOf="@id/imgCover">
 
         <TextView
             android:id="@+id/tvTripName"
@@ -63,7 +66,9 @@
             android:text="Trip Name"
             android:textColor="@android:color/white"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"/>
 
         <TextView
             android:id="@+id/tvTripDateTime"
@@ -71,7 +76,38 @@
             android:layout_height="wrap_content"
             android:text="Date • Time"
             android:textColor="@android:color/white"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:alpha="0.95"/>
+
+        <!-- Category + Template badge -->
+        <LinearLayout
+            android:id="@+id/layoutCategoryRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvTripCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Category"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                android:alpha="0.95"/>
+
+            <TextView
+                android:id="@+id/tvTemplateBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="  •  TEMPLATE"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvTripLocation"
@@ -79,9 +115,41 @@
             android:layout_height="wrap_content"
             android:text="Location"
             android:textColor="@android:color/white"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:alpha="0.95"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <!-- REMOVED: tvTripCity (city spinner removed in CreateTrip) -->
+
+        <TextView
+            android:id="@+id/tvTripBudget"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Budget"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:alpha="0.95"/>
+
+        <!-- Small action (looks like button but not bulky) -->
+        <TextView
+            android:id="@+id/btnEnableBudget"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable Budgeting"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:layout_marginTop="6dp"
+            android:padding="6dp"
+            android:background="#33FFFFFF"
+            android:visibility="gone"
+            tools:visibility="visible"/>
     </LinearLayout>
 
+    <!-- Destinations label -->
     <TextView
         android:id="@+id/tvDestinations"
         android:layout_width="wrap_content"
@@ -93,16 +161,33 @@
         app:layout_constraintTop_toBottomOf="@id/imgCover"
         app:layout_constraintStart_toStartOf="parent"/>
 
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/tvEmptyDestinations"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="No destinations yet. Tap + to add."
+        android:textSize="12sp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="4dp"
+        android:alpha="0.7"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@id/tvDestinations"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
     <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvDestinations"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginHorizontal="16dp"
-        app:layout_constraintTop_toBottomOf="@id/tvDestinations"
         app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/tvDestinations"
+        app:layout_constraintVertical_bias="0.0" />
 
     <!-- Bottom Bar -->
     <LinearLayout
