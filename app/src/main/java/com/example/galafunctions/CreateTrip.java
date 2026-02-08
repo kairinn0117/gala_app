@@ -53,6 +53,8 @@ public class CreateTrip extends AppCompatActivity {
 
     private ActivityResultLauncher<String> pickImageLauncher;
 
+    private ActivityResultLauncher<Intent> mapPickerLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -132,6 +134,42 @@ public class CreateTrip extends AppCompatActivity {
                 etTripBudget.setError(null);
             }
         });
+
+        mapPickerLauncher = registerForActivityResult(
+                new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+
+                        String address = result.getData()
+                                .getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+
+                        double lat = result.getData()
+                                .getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LAT, 0);
+
+                        double lng = result.getData()
+                                .getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LNG, 0);
+
+                        // 1️⃣ Set location text
+                        if (address != null) {
+                            etLocation.setText(address);
+                        }
+
+                        // 2️⃣ OPTIONAL (for later Firestore use)
+                        // store these in variables if you want
+                        // selectedLat = lat;
+                        // selectedLng = lng;
+                    }
+                }
+        );
+
+        Button btnTripSearchMap = findViewById(R.id.btnTripSearchMap);
+
+        btnTripSearchMap.setOnClickListener(v -> {
+            Intent intent = new Intent(CreateTrip.this, MapPickerActivity.class);
+            mapPickerLauncher.launch(intent);
+        });
+
+
 
         // Cancel
         btnCancelTrip.setOnClickListener(v -> finish());

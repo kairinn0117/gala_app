@@ -1,5 +1,6 @@
 package com.example.galafunctions;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -10,6 +11,7 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -36,12 +38,13 @@ public class CreateDestination extends AppCompatActivity {
     private String tripId;
     private boolean budgetEnabled = false; // will be read from Trip doc
 
+    private ActivityResultLauncher<Intent> mapPickerLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_create_destination);
-
         View main = findViewById(R.id.main);
         if (main != null) {
             ViewCompat.setOnApplyWindowInsetsListener(main, (v, insets) -> {
@@ -77,6 +80,39 @@ public class CreateDestination extends AppCompatActivity {
 
         btnSave = findViewById(R.id.btnSaveDestination);
         btnCancel = findViewById(R.id.btnCancelDestination);
+
+
+        mapPickerLauncher = registerForActivityResult(
+                new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+
+                        String address = result.getData()
+                                .getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+
+                        double lat = result.getData()
+                                .getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LAT, 0);
+
+                        double lng = result.getData()
+                                .getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LNG, 0);
+
+                        if (address != null) {
+                            etLocation.setText(address); // destination location field
+                        }
+
+                        // Optional for later:
+                        // destLat = lat;
+                        // destLng = lng;
+                    }
+                }
+        );
+
+        Button btnSearchMap = findViewById(R.id.btnSearchMap);
+
+        btnSearchMap.setOnClickListener(v -> {
+            Intent intent = new Intent(CreateDestination.this, MapPickerActivity.class);
+            mapPickerLauncher.launch(intent);
+        });
 
         // Cancel
         btnCancel.setOnClickListener(v -> finish());

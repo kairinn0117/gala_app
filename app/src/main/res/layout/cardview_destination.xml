@@ -1,43 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="6dp">
 
-    <!-- Destination Name -->
-    <TextView
-        android:id="@+id/tvDestinationName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Destination Name"
-        android:textStyle="bold"
-        android:textSize="15sp"/>
-
-    <!-- Location -->
-    <TextView
-        android:id="@+id/tvDestinationLocation"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Destination Location"
-        android:textSize="12sp"
-        android:layout_marginTop="2dp"/>
-
-    <!-- Status -->
-    <TextView
-        android:id="@+id/tvDestinationStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="PENDING"
-        android:textSize="11sp"
-        android:textStyle="bold"
-        android:layout_marginTop="4dp"/>
-
-    <!-- Divider -->
-    <View
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="10dp"
-        android:background="#DDDDDD"/>
-</LinearLayout>
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvDestinationName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Destination Name"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/tvDestinationType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Type"
+            android:textSize="12sp"
+            android:alpha="0.75"
+            android:layout_marginTop="2dp"/>
+
+        <TextView
+            android:id="@+id/tvDestinationLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Location"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/tvDestinationBudget"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Budget: ₱0.00"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            android:alpha="0.85"/>
+
+        <TextView
+            android:id="@+id/tvDestinationStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PENDING"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp"
+            android:alpha="0.9"/>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

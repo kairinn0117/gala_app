@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
 
@@ -27,27 +28,29 @@ public class TripActivity extends AppCompatActivity {
 
     private ImageView imgCover;
 
-    // Existing
+    // Trip header
     private TextView tvTripName, tvTripDateTime, tvTripLocation;
-
-    // Updated (removed tvTripCity)
     private TextView tvTripCategory, tvTemplateBadge, tvTripBudget;
-    private TextView btnEnableBudget; // NOTE: TextView in XML
+    private TextView btnEnableBudget; // TextView in XML
     private TextView tvEmptyDestinations;
 
     private Button btnStartTrip, btnAddDestination, btnBackTrip, btnEditTrip;
     private RecyclerView rvDestinations;
 
-    // ✅ RecyclerView data
+    // RecyclerView
     private DestinationAdapter destinationAdapter;
-    private ArrayList<Destination> destinationList = new ArrayList<>();
+    private final ArrayList<Destination> destinationList = new ArrayList<>();
 
+    // Firebase
     private FirebaseAuth auth;
     private FirebaseFirestore db;
 
     private String tripId;
     private boolean isTemplate = false;
     private boolean budgetEnabled = false;
+
+    // Firestore listener (para di dumoble kapag onResume)
+    private ListenerRegistration destinationsListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +71,13 @@ public class TripActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         tripId = getIntent().getStringExtra("tripId");
+
+        // Safety
+        if (tripId == null || tripId.trim().isEmpty()) {
+            Toast.makeText(this, "Trip not found (missing tripId).", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         // Bind views
         imgCover = findViewById(R.id.imgCover);
@@ -90,36 +100,42 @@ public class TripActivity extends AppCompatActivity {
         btnStartTrip = findViewById(R.id.btnStartTrip);
         btnBackTrip = findViewById(R.id.btnBackTrip);
 
-        // Basic safety
-        if (tripId == null || tripId.trim().isEmpty()) {
-            Toast.makeText(this, "Trip not found (missing tripId).", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        // ✅ Setup destinations RecyclerView
+        // Recycler setup
         rvDestinations.setLayoutManager(new LinearLayoutManager(this));
-        destinationAdapter = new DestinationAdapter(destinationList);
+
+        // ✅ Use updated adapter (with click listener + budgetEnabled)
+        destinationAdapter = new DestinationAdapter(
+                destinationList,
+                budgetEnabled,
+                destination -> {
+                    if (destination == null || TextUtils.isEmpty(destination.destinationId)) {
+                        Toast.makeText(this, "Destination not found.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Intent i = new Intent(TripActivity.this, EditDestinationActivity.class);
+                    i.putExtra(EditDestinationActivity.EXTRA_TRIP_ID, tripId);
+                    i.putExtra(EditDestinationActivity.EXTRA_DEST_ID, destination.destinationId);
+                    startActivity(i);
+                }
+        );
         rvDestinations.setAdapter(destinationAdapter);
 
-        // ✅ Load trip details + destinations
+        // Load trip details (will also attach destinations listener after budgetEnabled is known)
         loadTripDetails();
-        loadDestinations();
 
-        // Back
+        // Buttons
         btnBackTrip.setOnClickListener(v -> finish());
 
-        // Add destination (IMPORTANT: pass tripId)
         btnAddDestination.setOnClickListener(v -> {
             Intent intent = new Intent(TripActivity.this, CreateDestination.class);
             intent.putExtra("tripId", tripId);
             startActivity(intent);
         });
 
-        // Start/Activate button (dynamic)
         btnStartTrip.setOnClickListener(v -> {
             if (isTemplate) {
-                activateTrip(); // will flip template -> false
+                activateTrip();
             } else {
                 Intent intent = new Intent(TripActivity.this, StartGala.class);
                 intent.putExtra("tripId", tripId);
@@ -128,12 +144,30 @@ public class TripActivity extends AppCompatActivity {
             }
         });
 
-        // Enable budgeting (UI only for now; logic later)
         if (btnEnableBudget != null) {
             btnEnableBudget.setOnClickListener(v ->
                     Toast.makeText(this, "Enable Budgeting clicked (we'll add dialog next).", Toast.LENGTH_SHORT).show()
             );
         }
+
+        btnEditTrip.setOnClickListener(v -> {
+            Intent intent = new Intent(TripActivity.this, EditTripActivity.class);
+            intent.putExtra("tripId", tripId);
+            startActivity(intent);
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadTripDetails(); // reload header + (re)attach listener
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // ✅ important: remove snapshot listener para di magdoble kapag balik
+        detachDestinationsListener();
     }
 
     private void loadTripDetails() {
@@ -152,6 +186,7 @@ public class TripActivity extends AppCompatActivity {
                 .addOnSuccessListener(doc -> {
                     if (!doc.exists()) {
                         Toast.makeText(this, "Trip not found.", Toast.LENGTH_SHORT).show();
+                        finish();
                         return;
                     }
 
@@ -160,12 +195,10 @@ public class TripActivity extends AppCompatActivity {
                     String date = doc.getString("date");
                     String time = doc.getString("time");
                     String coverUrl = doc.getString("cover_url");
-
                     String category = doc.getString("trip_category");
 
                     Boolean templateVal = doc.getBoolean("is_template");
                     Boolean budgetVal = doc.getBoolean("budget_enabled");
-
                     Double tripBudget = doc.getDouble("trip_budget");
 
                     isTemplate = (templateVal != null && templateVal);
@@ -173,7 +206,6 @@ public class TripActivity extends AppCompatActivity {
 
                     tvTripName.setText(name != null ? name : "");
 
-                    // Date/time display: avoid showing " • " when empty
                     String dt = "";
                     if (!TextUtils.isEmpty(date)) dt += date;
                     if (!TextUtils.isEmpty(time)) dt += (dt.isEmpty() ? "" : " • ") + time;
@@ -182,14 +214,12 @@ public class TripActivity extends AppCompatActivity {
                     tvTripLocation.setText(location != null ? location : "");
                     tvTripCategory.setText(category != null ? category : "OTHER");
 
-                    // Template badge + button text
                     tvTemplateBadge.setVisibility(isTemplate ? View.VISIBLE : View.GONE);
                     btnStartTrip.setText(isTemplate ? "Activate" : "Start");
 
-                    // Budget views
                     if (budgetEnabled) {
                         tvTripBudget.setVisibility(View.VISIBLE);
-                        btnEnableBudget.setVisibility(View.GONE);
+                        if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.GONE);
 
                         String budgetText = (tripBudget != null)
                                 ? "Budget: ₱" + String.format("%.2f", tripBudget)
@@ -197,39 +227,62 @@ public class TripActivity extends AppCompatActivity {
                         tvTripBudget.setText(budgetText);
                     } else {
                         tvTripBudget.setVisibility(View.GONE);
-                        btnEnableBudget.setVisibility(View.VISIBLE);
+                        if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.VISIBLE);
                     }
+
+                    // ✅ Recreate adapter with updated budgetEnabled (para mag show/hide budget sa items)
+                    destinationAdapter = new DestinationAdapter(
+                            destinationList,
+                            budgetEnabled,
+                            destination -> {
+                                if (destination == null || TextUtils.isEmpty(destination.destinationId)) {
+                                    Toast.makeText(this, "Destination not found.", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                Intent i = new Intent(TripActivity.this, EditDestinationActivity.class);
+                                i.putExtra(EditDestinationActivity.EXTRA_TRIP_ID, tripId);
+                                i.putExtra(EditDestinationActivity.EXTRA_DEST_ID, destination.destinationId);
+                                startActivity(i);
+                            }
+                    );
+                    rvDestinations.setAdapter(destinationAdapter);
 
                     if (coverUrl != null && !coverUrl.trim().isEmpty()) {
                         loadImageFromUrl(coverUrl);
                     }
+
+                    // ✅ Make sure destinations are listening (after we know budgetEnabled)
+                    attachDestinationsListener();
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
                 );
     }
 
-    // ✅ NEW: load destinations into RecyclerView
-    private void loadDestinations() {
-        if (auth.getCurrentUser() == null) return;
+    private void attachDestinationsListener() {
+        detachDestinationsListener(); // prevent duplicates
 
+        if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
-        db.collection("users")
+        destinationsListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
                 .document(tripId)
                 .collection("destinations")
-                // .orderBy("created_at") // optional; remove if you get index error
                 .addSnapshotListener((snapshots, e) -> {
+                    if (e != null) {
+                        Toast.makeText(this, "Destinations listener error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     if (snapshots == null) return;
 
                     destinationList.clear();
 
-                    for (DocumentSnapshot doc : snapshots) {
+                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
                         Destination d = doc.toObject(Destination.class);
                         if (d != null) {
-                            d.destinationId = doc.getId();
+                            d.destinationId = doc.getId(); // ✅ important
                             destinationList.add(d);
                         }
                     }
@@ -242,12 +295,17 @@ public class TripActivity extends AppCompatActivity {
                 });
     }
 
+    private void detachDestinationsListener() {
+        if (destinationsListener != null) {
+            destinationsListener.remove();
+            destinationsListener = null;
+        }
+    }
+
     private void activateTrip() {
         if (auth.getCurrentUser() == null) return;
 
         String uid = auth.getCurrentUser().getUid();
-
-        // Simple activation: set is_template = false
         btnStartTrip.setEnabled(false);
 
         db.collection("users")

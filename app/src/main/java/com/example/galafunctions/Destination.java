@@ -1,12 +1,13 @@
 package com.example.galafunctions;
 
 public class Destination {
-    public String destinationId; // doc id (manual set)
+    public String destinationId;
     public String destination_name;
-    public String location;
     public String type;
-    public String status;
+    public String location;
     public Double budget;
+    public String description;
+    public String status;
 
     public Destination() {}
 }
