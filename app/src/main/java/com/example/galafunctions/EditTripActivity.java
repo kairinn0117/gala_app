@@ -40,6 +40,7 @@ public class EditTripActivity extends AppCompatActivity {
 
     private ImageView imgCoverPick;
     private Button btnChangeCover, btnTripSearchMap;
+    private ActivityResultLauncher<Intent> mapPickerLauncher;
 
     private Spinner spTripCategory;
     private Switch swIsTemplate, swBudgetEnabled;
@@ -57,6 +58,7 @@ public class EditTripActivity extends AppCompatActivity {
     private String existingCoverUrl = ""; // if user doesn’t change cover
 
     private ActivityResultLauncher<String> pickImageLauncher;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,11 +158,23 @@ public class EditTripActivity extends AppCompatActivity {
         // Save
         btnSaveTrip.setOnClickListener(v -> saveTripEdits());
 
-        // Maps button (optional)
+        btnTripSearchMap = findViewById(R.id.btnTripSearchMap);
+
+        mapPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+                        if (!TextUtils.isEmpty(address)) {
+                            etLocation.setText(address);
+                        }
+                    }
+                }
+        );
+
         btnTripSearchMap.setOnClickListener(v -> {
-            // If you already implemented MapPickerActivity result flow, use it here.
-            // For now, leave it or connect later.
-            Toast.makeText(this, "Maps picker hookup next (same as CreateTrip).", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(this, MapPickerActivity.class);
+            mapPickerLauncher.launch(intent);
         });
 
         // Load existing trip data

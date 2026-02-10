@@ -59,6 +59,8 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripVH> {
         }
 
         holder.itemView.setOnClickListener(v -> {
+            if (trip.tripId == null) return; // safety
+
             Intent intent = new Intent(context, TripActivity.class);
             intent.putExtra("tripId", trip.tripId);
             context.startActivity(intent);

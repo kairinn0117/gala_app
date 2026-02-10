@@ -49,7 +49,7 @@ public class TripActivity extends AppCompatActivity {
     private boolean isTemplate = false;
     private boolean budgetEnabled = false;
 
-    // Firestore listener (para di dumoble kapag onResume)
+    // Listener
     private ListenerRegistration destinationsListener;
 
     @Override
@@ -71,9 +71,7 @@ public class TripActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         tripId = getIntent().getStringExtra("tripId");
-
-        // Safety
-        if (tripId == null || tripId.trim().isEmpty()) {
+        if (TextUtils.isEmpty(tripId)) {
             Toast.makeText(this, "Trip not found (missing tripId).", Toast.LENGTH_SHORT).show();
             finish();
             return;
@@ -103,7 +101,7 @@ public class TripActivity extends AppCompatActivity {
         // Recycler setup
         rvDestinations.setLayoutManager(new LinearLayoutManager(this));
 
-        // ✅ Use updated adapter (with click listener + budgetEnabled)
+        // Adapter (listener)
         destinationAdapter = new DestinationAdapter(
                 destinationList,
                 budgetEnabled,
@@ -120,9 +118,6 @@ public class TripActivity extends AppCompatActivity {
                 }
         );
         rvDestinations.setAdapter(destinationAdapter);
-
-        // Load trip details (will also attach destinations listener after budgetEnabled is known)
-        loadTripDetails();
 
         // Buttons
         btnBackTrip.setOnClickListener(v -> finish());
@@ -155,24 +150,27 @@ public class TripActivity extends AppCompatActivity {
             intent.putExtra("tripId", tripId);
             startActivity(intent);
         });
+
+        // Load header once
+        loadTripDetails();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadTripDetails(); // reload header + (re)attach listener
+        loadTripDetails(); // refresh header + reattach listener safely
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        // ✅ important: remove snapshot listener para di magdoble kapag balik
         detachDestinationsListener();
     }
 
     private void loadTripDetails() {
         if (auth.getCurrentUser() == null) {
             Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
 
@@ -209,7 +207,7 @@ public class TripActivity extends AppCompatActivity {
                     String dt = "";
                     if (!TextUtils.isEmpty(date)) dt += date;
                     if (!TextUtils.isEmpty(time)) dt += (dt.isEmpty() ? "" : " • ") + time;
-                    tvTripDateTime.setText(dt.isEmpty() ? "" : dt);
+                    tvTripDateTime.setText(dt);
 
                     tvTripLocation.setText(location != null ? location : "");
                     tvTripCategory.setText(category != null ? category : "OTHER");
@@ -219,6 +217,7 @@ public class TripActivity extends AppCompatActivity {
 
                     if (budgetEnabled) {
                         tvTripBudget.setVisibility(View.VISIBLE);
+                        if (btnEnableBudget != null) btnEnableBudget.setHapticFeedbackEnabled(false);
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.GONE);
 
                         String budgetText = (tripBudget != null)
@@ -230,7 +229,7 @@ public class TripActivity extends AppCompatActivity {
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.VISIBLE);
                     }
 
-                    // ✅ Recreate adapter with updated budgetEnabled (para mag show/hide budget sa items)
+                    // update adapter setting (budgetEnabled)
                     destinationAdapter = new DestinationAdapter(
                             destinationList,
                             budgetEnabled,
@@ -239,6 +238,7 @@ public class TripActivity extends AppCompatActivity {
                                     Toast.makeText(this, "Destination not found.", Toast.LENGTH_SHORT).show();
                                     return;
                                 }
+
                                 Intent i = new Intent(TripActivity.this, EditDestinationActivity.class);
                                 i.putExtra(EditDestinationActivity.EXTRA_TRIP_ID, tripId);
                                 i.putExtra(EditDestinationActivity.EXTRA_DEST_ID, destination.destinationId);
@@ -247,11 +247,11 @@ public class TripActivity extends AppCompatActivity {
                     );
                     rvDestinations.setAdapter(destinationAdapter);
 
-                    if (coverUrl != null && !coverUrl.trim().isEmpty()) {
+                    if (!TextUtils.isEmpty(coverUrl)) {
                         loadImageFromUrl(coverUrl);
                     }
 
-                    // ✅ Make sure destinations are listening (after we know budgetEnabled)
+                    // attach listener once
                     attachDestinationsListener();
                 })
                 .addOnFailureListener(e ->
@@ -260,7 +260,7 @@ public class TripActivity extends AppCompatActivity {
     }
 
     private void attachDestinationsListener() {
-        detachDestinationsListener(); // prevent duplicates
+        detachDestinationsListener();
 
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
@@ -272,7 +272,7 @@ public class TripActivity extends AppCompatActivity {
                 .collection("destinations")
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
-                        Toast.makeText(this, "Destinations listener error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Destinations error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
                     if (snapshots == null) return;
@@ -282,7 +282,7 @@ public class TripActivity extends AppCompatActivity {
                     for (DocumentSnapshot doc : snapshots.getDocuments()) {
                         Destination d = doc.toObject(Destination.class);
                         if (d != null) {
-                            d.destinationId = doc.getId(); // ✅ important
+                            d.destinationId = doc.getId();
                             destinationList.add(d);
                         }
                     }

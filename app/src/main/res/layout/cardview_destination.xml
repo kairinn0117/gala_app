@@ -5,62 +5,101 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
     app:cardCornerRadius="14dp"
-    app:cardElevation="6dp">
+    app:cardElevation="6dp"
+    app:cardUseCompatPadding="true">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:padding="12dp">
 
+        <!-- Destination Name -->
         <TextView
             android:id="@+id/tvDestinationName"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Destination Name"
             android:textStyle="bold"
             android:textSize="16sp"
             android:maxLines="1"
-            android:ellipsize="end"/>
+            android:ellipsize="end"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tvDestinationStatus"
+            app:layout_constraintHorizontal_bias="0" />
 
-        <TextView
-            android:id="@+id/tvDestinationType"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Type"
-            android:textSize="12sp"
-            android:alpha="0.75"
-            android:layout_marginTop="2dp"/>
-
-        <TextView
-            android:id="@+id/tvDestinationLocation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Location"
-            android:textSize="12sp"
-            android:layout_marginTop="4dp"
-            android:maxLines="1"
-            android:ellipsize="end"/>
-
-        <TextView
-            android:id="@+id/tvDestinationBudget"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Budget: ₱0.00"
-            android:textSize="12sp"
-            android:layout_marginTop="4dp"
-            android:visibility="gone"
-            android:alpha="0.85"/>
-
+        <!-- Status Badge -->
         <TextView
             android:id="@+id/tvDestinationStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="#FF6B6B"
+            android:paddingStart="10dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="4dp"
             android:text="PENDING"
-            android:textSize="12sp"
+            android:textColor="#263238"
+            android:textSize="11sp"
             android:textStyle="bold"
-            android:layout_marginTop="6dp"
-            android:alpha="0.9"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    </LinearLayout>
+        <!-- Type -->
+        <TextView
+            android:id="@+id/tvDestinationType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Type"
+            android:textSize="12sp"
+            android:alpha="0.75"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toBottomOf="@id/tvDestinationName"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="2dp" />
+
+        <!-- Location -->
+        <TextView
+            android:id="@+id/tvDestinationLocation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Location"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintTop_toBottomOf="@id/tvDestinationType"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="6dp" />
+
+        <!-- Time -->
+        <TextView
+            android:id="@+id/tvDestinationTime"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Time: 9:00 AM"
+            android:textSize="12sp"
+            android:alpha="0.9"
+            app:layout_constraintTop_toBottomOf="@id/tvDestinationLocation"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="4dp" />
+
+        <!-- Budget (optional, controlled by adapter) -->
+        <TextView
+            android:id="@+id/tvDestinationBudget"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Budget: ₱0.00"
+            android:textSize="12sp"
+            android:alpha="0.85"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/tvDestinationTime"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginTop="4dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

@@ -2,146 +2,176 @@ package com.example.galafunctions;
 
 import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 
-
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link Home#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class Home extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // ✅ RecyclerView stuff
-    private RecyclerView rvTrips;
-    private TripAdapter tripAdapter;
-    private ArrayList<Trip> tripList = new ArrayList<>();
-    private TextView tvEmptyTrips; // optional (only works if you add it in XML)
-
-    // ✅ Firebase
     private FirebaseAuth auth;
     private FirebaseFirestore db;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private RecyclerView rvTrips;
+    private TextView tvEmptyTrips;
+    private EditText etSearch;
 
-    public Home() {
-        // Required empty public constructor
-    }
+    private Button btnFilter, btnPlanned;
+    private FloatingActionButton fabAddGala;
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment Home.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static Home newInstance(String param1, String param2) {
-        Home fragment = new Home();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
+    private final ArrayList<Trip> rawList = new ArrayList<>();
+    private final ArrayList<Trip> displayList = new ArrayList<>();
+    private TripAdapter adapter;
+
+    private ListenerRegistration plannedListener;
+    private String searchQuery = "";
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
-
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
     }
 
+    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        FloatingActionButton fabAddGala = view.findViewById(R.id.fabAddGala);
-        if (fabAddGala != null) {
-            fabAddGala.setOnClickListener(v -> {
-                Intent intent = new Intent(getActivity(), CreateTrip.class);
-                startActivity(intent);
-            });
-        }
-
-        // ✅ RecyclerView bind (make sure fragment_home.xml has rvTrips)
         rvTrips = view.findViewById(R.id.rvTrips);
-
-        if (rvTrips != null) {
-            rvTrips.setLayoutManager(new LinearLayoutManager(getContext()));
-            tripAdapter = new TripAdapter(getContext(), tripList);
-            rvTrips.setAdapter(tripAdapter);
-        }
-
-        // Optional empty state text (only if you add tvEmptyTrips in fragment_home.xml)
         tvEmptyTrips = view.findViewById(R.id.tvEmptyTrips);
+        etSearch = view.findViewById(R.id.etSearch);
 
-        // ✅ Load trips
-        loadTrips();
+        btnPlanned = view.findViewById(R.id.btnPlanned);
+        btnFilter = view.findViewById(R.id.btnFilter);
+
+        fabAddGala = view.findViewById(R.id.fabAddGala);
+
+        rvTrips.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new TripAdapter(requireContext(), displayList);
+        rvTrips.setAdapter(adapter);
+
+        fabAddGala.setOnClickListener(v ->
+                startActivity(new Intent(getActivity(), CreateTrip.class))
+        );
+
+        btnPlanned.setOnClickListener(v -> attachPlannedListener());
+
+        btnFilter.setOnClickListener(v ->
+                Toast.makeText(getContext(), "Filter next step.", Toast.LENGTH_SHORT).show()
+        );
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void afterTextChanged(Editable s) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchQuery = (s != null) ? s.toString().trim().toLowerCase() : "";
+                applySearch();
+            }
+        });
 
         return view;
     }
-    private void loadTrips() {
-        if (auth.getCurrentUser() == null) return;
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        attachPlannedListener();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        detachListener();
+    }
+
+    private void attachPlannedListener() {
+        detachListener();
+
+        if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
-        db.collection("users")
+        plannedListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
-                .orderBy("created_at") // remove this line if you get index error
-                .addSnapshotListener((snapshots, e) -> {
-                    if (snapshots == null) return;
+                .whereEqualTo("status", "PLANNED")
+                .whereEqualTo("is_archived", false)
+                .orderBy("created_at", Query.Direction.DESCENDING)
+                .addSnapshotListener((snap, e) -> {
+                    if (e != null) {
+                        Toast.makeText(getContext(), "Load error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (snap == null) return;
 
-                    tripList.clear();
+                    rawList.clear();
 
-                    for (DocumentSnapshot doc : snapshots) {
-                        Trip trip = doc.toObject(Trip.class);
-                        if (trip != null) {
-                            trip.tripId = doc.getId(); // IMPORTANT for opening TripActivity
-                            tripList.add(trip);
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        Trip t = doc.toObject(Trip.class);
+                        if (t != null) {
+                            t.tripId = doc.getId(); // ✅ important for click redirect
+                            rawList.add(t);
                         }
                     }
 
-                    if (tripAdapter != null) {
-                        tripAdapter.notifyDataSetChanged();
-                    }
-
-                    // Optional empty state
-                    if (tvEmptyTrips != null) {
-                        tvEmptyTrips.setVisibility(tripList.isEmpty() ? View.VISIBLE : View.GONE);
-                    }
+                    applySearch();
                 });
     }
 
+    private void applySearch() {
+        displayList.clear();
+
+        for (Trip t : rawList) {
+            if (t == null) continue;
+
+            if (matchesSearch(t)) {
+                displayList.add(t);
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+        tvEmptyTrips.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean matchesSearch(Trip t) {
+        if (TextUtils.isEmpty(searchQuery)) return true;
+
+        String name = (t.trip_name != null) ? t.trip_name.toLowerCase() : "";
+        String loc  = (t.location != null) ? t.location.toLowerCase() : "";
+        String cat  = (t.trip_category != null) ? t.trip_category.toLowerCase() : "";
+
+        return name.contains(searchQuery) || loc.contains(searchQuery) || cat.contains(searchQuery);
+    }
+
+    private void detachListener() {
+        if (plannedListener != null) {
+            plannedListener.remove();
+            plannedListener = null;
+        }
+    }
 }

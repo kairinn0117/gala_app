@@ -124,33 +124,51 @@
         </ScrollView>
     </androidx.cardview.widget.CardView>
 
-    <!-- Bottom bar: buttons -->
+    <!-- Bottom bar: Back | End Trip | Done/Next -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingTop="12dp"
+        android:paddingBottom="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- ⬅️ Back (BOTTOM LEFT) -->
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Back" />
+
+        <!-- Spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- 🔴 End Trip (CENTER) -->
         <Button
             android:id="@+id/btnEndTrip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="End Trip"/>
+            android:text="End Trip" />
 
+        <!-- Spacer -->
         <View
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_weight="1"/>
+            android:layout_weight="1" />
 
+        <!-- ✅ Done / Next (RIGHT) -->
         <Button
             android:id="@+id/btnDoneNext"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Done / Next"/>
+            android:text="Done / Next" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,5 +9,6 @@ public class Destination {
     public String description;
     public String status;
 
+    public String time;
     public Destination() {}
 }

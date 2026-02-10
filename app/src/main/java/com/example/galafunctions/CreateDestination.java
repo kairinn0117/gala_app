@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -12,6 +13,7 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -21,14 +23,20 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class CreateDestination extends AppCompatActivity {
 
-    // XML views (UPDATED to match your new XML)
-    private EditText etName, etLocation, etBudget, etTimeIn, etTimeOut, etDescription;
+    // Basic fields
+    private EditText etName, etLocation, etBudget, etDescription;
     private Spinner spType;
+
+    // Time spinners (REQUIRED)
+    private Spinner spHour, spMinute, spAmPm;
+
     private Button btnSave, btnCancel;
     private LinearLayout layoutDestinationBudget;
 
@@ -36,7 +44,7 @@ public class CreateDestination extends AppCompatActivity {
     private FirebaseFirestore db;
 
     private String tripId;
-    private boolean budgetEnabled = false; // will be read from Trip doc
+    private boolean budgetEnabled = false;
 
     private ActivityResultLauncher<Intent> mapPickerLauncher;
 
@@ -45,6 +53,7 @@ public class CreateDestination extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_create_destination);
+
         View main = findViewById(R.id.main);
         if (main != null) {
             ViewCompat.setOnApplyWindowInsetsListener(main, (v, insets) -> {
@@ -65,50 +74,45 @@ public class CreateDestination extends AppCompatActivity {
             return;
         }
 
-        // Bind views (IMPORTANT: assign to class fields)
+        // Bind views
         etName = findViewById(R.id.etDestinationName);
         spType = findViewById(R.id.spDestinationType);
+
         etLocation = findViewById(R.id.etDestinationLocation);
+        Button btnSearchMap = findViewById(R.id.btnSearchMap);
 
         layoutDestinationBudget = findViewById(R.id.layoutDestinationBudget);
         etBudget = findViewById(R.id.etDestinationBudget);
 
-        etTimeIn = findViewById(R.id.etTimeIn);
-        etTimeOut = findViewById(R.id.etTimeOut);
+        // Time spinners
+        spHour = findViewById(R.id.spHour);
+        spMinute = findViewById(R.id.spMinute);
+        spAmPm = findViewById(R.id.spAmPm);
 
         etDescription = findViewById(R.id.etDestinationDescription);
 
         btnSave = findViewById(R.id.btnSaveDestination);
         btnCancel = findViewById(R.id.btnCancelDestination);
 
+        // ✅ populate time spinners
+        populateTimeSpinners();
 
+        // Map picker result
         mapPickerLauncher = registerForActivityResult(
-                new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+                new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-
-                        String address = result.getData()
-                                .getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
-
-                        double lat = result.getData()
-                                .getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LAT, 0);
-
-                        double lng = result.getData()
-                                .getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LNG, 0);
-
-                        if (address != null) {
-                            etLocation.setText(address); // destination location field
+                        String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+                        if (!TextUtils.isEmpty(address)) {
+                            etLocation.setText(address);
+                        } else {
+                            Toast.makeText(this, "No address selected.", Toast.LENGTH_SHORT).show();
                         }
-
-                        // Optional for later:
-                        // destLat = lat;
-                        // destLng = lng;
                     }
                 }
         );
 
-        Button btnSearchMap = findViewById(R.id.btnSearchMap);
-
+        // ✅ open map picker
         btnSearchMap.setOnClickListener(v -> {
             Intent intent = new Intent(CreateDestination.this, MapPickerActivity.class);
             mapPickerLauncher.launch(intent);
@@ -117,11 +121,42 @@ public class CreateDestination extends AppCompatActivity {
         // Cancel
         btnCancel.setOnClickListener(v -> finish());
 
-        // Load trip settings (budget_enabled) then show/hide budget UI
+        // Read trip settings (budget_enabled)
         loadTripSettings();
 
         // Save
         btnSave.setOnClickListener(v -> saveDestination());
+    }
+
+    private void populateTimeSpinners() {
+        // Hours: 1-12
+        ArrayList<String> hours = new ArrayList<>();
+        hours.add("HH");
+        for (int h = 1; h <= 12; h++) hours.add(String.valueOf(h));
+
+        // Minutes: 00-59
+        ArrayList<String> minutes = new ArrayList<>();
+        minutes.add("MM");
+        for (int m = 0; m < 60; m++) minutes.add(String.format(Locale.getDefault(), "%02d", m));
+
+        // AM/PM
+        ArrayList<String> ampm = new ArrayList<>();
+        ampm.add("AM/PM");
+        ampm.add("AM");
+        ampm.add("PM");
+
+        ArrayAdapter<String> hourAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, hours);
+        ArrayAdapter<String> minuteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, minutes);
+        ArrayAdapter<String> ampmAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ampm);
+
+        spHour.setAdapter(hourAdapter);
+        spMinute.setAdapter(minuteAdapter);
+        spAmPm.setAdapter(ampmAdapter);
+
+        // default to placeholders
+        spHour.setSelection(0);
+        spMinute.setSelection(0);
+        spAmPm.setSelection(0);
     }
 
     private void loadTripSettings() {
@@ -139,16 +174,9 @@ public class CreateDestination extends AppCompatActivity {
                 .document(tripId)
                 .get()
                 .addOnSuccessListener(doc -> {
-                    if (!doc.exists()) {
-                        Toast.makeText(this, "Trip not found.", Toast.LENGTH_SHORT).show();
-                        finish();
-                        return;
-                    }
-
                     Boolean b = doc.getBoolean("budget_enabled");
                     budgetEnabled = (b != null && b);
 
-                    // Show/Hide budget section
                     layoutDestinationBudget.setVisibility(budgetEnabled ? View.VISIBLE : View.GONE);
 
                     if (!budgetEnabled) {
@@ -157,8 +185,6 @@ public class CreateDestination extends AppCompatActivity {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to read trip settings: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    // Safe default: hide budget if we can't confirm
                     budgetEnabled = false;
                     layoutDestinationBudget.setVisibility(View.GONE);
                 });
@@ -177,25 +203,26 @@ public class CreateDestination extends AppCompatActivity {
         String location = etLocation.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
 
-        // Optional time fields
-        String timeIn = etTimeIn.getText().toString().trim();
-        String timeOut = etTimeOut.getText().toString().trim();
+        // Required time from spinners
+        String hour = String.valueOf(spHour.getSelectedItem());
+        String minute = String.valueOf(spMinute.getSelectedItem());
+        String ampm = String.valueOf(spAmPm.getSelectedItem());
 
-        // Budget (only if budgetEnabled)
-        String budgetStr = etBudget.getText().toString().trim();
+        // Validation
+        if (TextUtils.isEmpty(name)) { etName.setError("Required"); return; }
+        if (TextUtils.isEmpty(location)) { etLocation.setError("Required"); return; }
 
-        // ---------- Validation ----------
-        if (TextUtils.isEmpty(name)) {
-            etName.setError("Required");
+        // ✅ must not be placeholder
+        if ("HH".equals(hour) || "MM".equals(minute) || "AM/PM".equals(ampm)) {
+            Toast.makeText(this, "Please select a valid time.", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (TextUtils.isEmpty(location)) {
-            etLocation.setError("Required");
-            return;
-        }
+
+        String time = hour + ":" + minute + " " + ampm;
 
         Double budget = null;
         if (budgetEnabled) {
+            String budgetStr = etBudget.getText().toString().trim();
             if (TextUtils.isEmpty(budgetStr)) {
                 etBudget.setError("Required");
                 return;
@@ -220,18 +247,13 @@ public class CreateDestination extends AppCompatActivity {
         destination.put("destination_name", name);
         destination.put("type", type);
         destination.put("location", location);
+        destination.put("time", time); // ✅ destination start time
         destination.put("description", description);
         destination.put("status", "PENDING");
         destination.put("created_at", Timestamp.now());
 
-        // Save optional time-in/out if user typed something
-        if (!TextUtils.isEmpty(timeIn)) destination.put("time_in", timeIn);
-        if (!TextUtils.isEmpty(timeOut)) destination.put("time_out", timeOut);
-
-        // Save budget only if enabled
         if (budgetEnabled && budget != null) {
             destination.put("budget", budget);
-            // for later expense tracking
             destination.put("spent", 0.0);
         }
 
@@ -244,7 +266,7 @@ public class CreateDestination extends AppCompatActivity {
                 .set(destination)
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Destination saved!", Toast.LENGTH_SHORT).show();
-                    finish(); // back to TripActivity
+                    finish();
                 })
                 .addOnFailureListener(e -> {
                     btnSave.setEnabled(true);

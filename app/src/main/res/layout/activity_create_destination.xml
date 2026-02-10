@@ -95,11 +95,11 @@
                     android:minHeight="48dp"/>
             </LinearLayout>
 
-            <!-- Time In and Time Out (both optional) -->
+            <!-- ✅ Time (REQUIRED) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Time (optional)"
+                android:text="Time"
                 android:layout_marginTop="10dp"/>
 
             <LinearLayout
@@ -108,26 +108,25 @@
                 android:orientation="horizontal"
                 android:layout_marginTop="6dp">
 
-                <EditText
-                    android:id="@+id/etTimeIn"
+                <Spinner
+                    android:id="@+id/spHour"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="Time In"
-                    android:focusable="false"
-                    android:clickable="true"
-                    tools:ignore="TouchTargetSizeCheck" />
+                    android:layout_weight="1"/>
 
-                <EditText
-                    android:id="@+id/etTimeOut"
+                <Spinner
+                    android:id="@+id/spMinute"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:hint="Time Out"
-                    android:focusable="false"
-                    android:clickable="true"
-                    tools:ignore="TouchTargetSizeCheck" />
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"/>
+
+                <Spinner
+                    android:id="@+id/spAmPm"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"/>
             </LinearLayout>
 
             <EditText
@@ -142,7 +141,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom bar with Save button -->
+    <!-- Bottom bar -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="0dp"
