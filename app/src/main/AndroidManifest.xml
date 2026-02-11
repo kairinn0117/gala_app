@@ -18,6 +18,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Galafunctions">
         <activity
+            android:name=".DeleteAccount"
+            android:exported="false" />
+        <activity
+            android:name=".AboutUs"
+            android:exported="false" />
+        <activity
+            android:name=".Password"
+            android:exported="false" />
+        <activity
+            android:name=".PersonalInformation"
+            android:exported="false" />
+        <activity
             android:name=".DestinationPhotoActivity"
             android:exported="false" />
         <activity
