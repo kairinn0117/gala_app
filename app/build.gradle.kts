@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.galafunctions"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.galafunctions"
@@ -47,6 +45,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation ("com.google.firebase:firebase-firestore")
     implementation ("com.google.firebase:firebase-storage")
+    implementation("pl.droidsonroids.gif:android-gif-drawable:1.2.28")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)

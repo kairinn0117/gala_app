@@ -21,20 +21,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:clipToPadding="false">
 
-            <TextView
+            <ImageView
+                android:id="@+id/createdestination"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Create Destination"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                app:srcCompat="@drawable/destinationcreate" />
 
             <EditText
                 android:id="@+id/etDestinationName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Destination name"
                 android:inputType="textPersonName"
                 android:minHeight="48dp" />
@@ -42,45 +43,53 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Type of destination"
-                android:layout_marginTop="10dp"/>
+                android:layout_marginTop="10dp"
+                android:text="Type of destination" />
 
             <Spinner
                 android:id="@+id/spDestinationType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:entries="@array/destination_types"
                 android:layout_marginTop="6dp"
-                android:minHeight="48dp" />
+                android:background="@drawable/spinner_background"
+                android:entries="@array/destination_types"
+                android:minHeight="48dp"
+                android:elevation="4dp"
+                android:outlineProvider="background" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <EditText
                     android:id="@+id/etDestinationLocation"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:background="@drawable/rounded_edittext"
                     android:hint="Location"
-                    android:inputType="text"/>
+                    android:inputType="text"
+                    android:textColor="@color/black" />
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnSearchMap"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Maps"
-                    android:layout_marginStart="8dp"/>
+                    android:layout_marginStart="8dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Search Map"
+                    android:src="@drawable/location" />
             </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/layoutDestinationBudget"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
                 android:layout_marginTop="10dp"
+                android:orientation="vertical"
                 android:visibility="gone"
                 tools:visibility="visible">
 
@@ -88,35 +97,41 @@
                     android:id="@+id/etDestinationBudget"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_edittext"
                     android:hint="Budget (e.g., 1500)"
                     android:inputType="numberDecimal"
-                    android:minHeight="48dp"/>
+                    android:minHeight="48dp"
+                    android:textColor="@color/black" />
             </LinearLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Time"
-                android:layout_marginTop="10dp"/>
+                android:layout_marginTop="10dp"
+                android:text="Time" />
 
             <EditText
                 android:id="@+id/etDestTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Pick time"
-                android:focusable="false"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/rounded_edittext"
                 android:clickable="true"
+                android:focusable="false"
+                android:hint="Pick time"
                 android:minHeight="48dp"
-                android:layout_marginTop="6dp"/>
+                android:textColor="@color/black" />
 
             <EditText
                 android:id="@+id/etDestinationDescription"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:hint="Description"
                 android:layout_marginTop="10dp"
+                android:background="@drawable/rounded_edittext"
                 android:gravity="top"
-                android:inputType="textMultiLine"/>
+                android:hint="Description"
+                android:inputType="textMultiLine"
+                android:textColor="@color/black" />
 
         </LinearLayout>
     </ScrollView>
@@ -131,18 +146,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
+        <ImageButton
             android:id="@+id/btnCancelDestination"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cancel"
+            android:background="@android:color/transparent"
+            android:src="@drawable/cancel"
+            android:contentDescription="Cancel"
             android:layout_marginEnd="12dp"/>
 
-        <Button
+        <ImageButton
             android:id="@+id/btnSaveDestination"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Save"/>
+            android:background="@android:color/transparent"
+            android:src="@drawable/save"
+            android:contentDescription="Save"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

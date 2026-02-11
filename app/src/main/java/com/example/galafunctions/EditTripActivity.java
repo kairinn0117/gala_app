@@ -24,15 +24,15 @@ import java.util.UUID;
 
 public class EditTripActivity extends AppCompatActivity {
 
-    private ImageView imgCover;
-    private Button btnChangeCover, btnTripSearchMap;
+    private ImageButton imgCover;
+    private ImageButton btnTripSearchMap;
 
     private Spinner spTripCategory;
     private Switch swBudgetEnabled;
     private LinearLayout layoutBudgetSection;
 
     private EditText etTripName, etLocation, etTripBudget, etDescription;
-    private Button btnSaveTrip, btnCancelTrip;
+    private ImageButton btnSaveTrip, btnCancelTrip;
 
     private FirebaseAuth auth;
     private FirebaseFirestore db;
@@ -62,9 +62,8 @@ public class EditTripActivity extends AppCompatActivity {
             return;
         }
 
-        // Bind views (same as CreateTrip)
+        // Bind views
         imgCover = findViewById(R.id.imgCover);
-        btnChangeCover = findViewById(R.id.btnChangeCover);
 
         spTripCategory = findViewById(R.id.spTripCategory);
 
@@ -96,7 +95,6 @@ public class EditTripActivity extends AppCompatActivity {
         );
 
         imgCover.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
-        btnChangeCover.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         // Budget toggle
         swBudgetEnabled.setOnCheckedChangeListener((b, checked) -> {
@@ -189,6 +187,8 @@ public class EditTripActivity extends AppCompatActivity {
                                 .load(existingCoverUrl)
                                 .centerCrop()
                                 .into(imgCover);
+                    } else {
+                        imgCover.setImageResource(R.drawable.addphoto);
                     }
                 })
                 .addOnFailureListener(e ->
@@ -240,7 +240,7 @@ public class EditTripActivity extends AppCompatActivity {
         updates.put("trip_budget", tripBudget);
         updates.put("description", description);
 
-        // ✅ Clean old fields (optional but recommended para same schema na)
+        // ✅ Clean old fields
         updates.put("people_count", null);
         updates.put("date", "");
         updates.put("time", "");

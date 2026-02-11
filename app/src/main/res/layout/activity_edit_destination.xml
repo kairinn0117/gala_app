@@ -20,20 +20,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:clipToPadding="false">
 
-            <TextView
+            <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Edit Destination"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="12dp"/>
+                android:src="@drawable/editdestination"
+                android:layout_marginBottom="12dp"
+                android:contentDescription="Edit Destination Title" />
 
             <EditText
                 android:id="@+id/etDestinationName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Destination name"
                 android:minHeight="48dp"/>
 
@@ -49,6 +50,9 @@
                 android:layout_height="wrap_content"
                 android:minHeight="48dp"
                 android:layout_marginTop="6dp"
+                android:background="@drawable/spinner_background"
+                android:elevation="4dp"
+                android:outlineProvider="background"
                 android:entries="@array/destination_types"/>
 
             <!-- Location row -->
@@ -56,6 +60,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginTop="10dp">
 
                 <EditText
@@ -63,17 +68,21 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:background="@drawable/rounded_edittext"
+                    android:minHeight="48dp"
                     android:hint="Location"/>
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnSearchMap"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Maps"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/location"
+                    android:contentDescription="Search Map"
                     android:layout_marginStart="8dp"/>
             </LinearLayout>
 
-            <!-- Budget (optional UI; you can hide it based on trip budget_enabled) -->
+            <!-- Budget -->
             <LinearLayout
                 android:id="@+id/layoutDestinationBudget"
                 android:layout_width="match_parent"
@@ -85,9 +94,10 @@
                     android:id="@+id/etDestinationBudget"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_edittext"
+                    android:minHeight="48dp"
                     android:hint="Budget (optional)"
-                    android:inputType="numberDecimal"
-                    android:minHeight="48dp"/>
+                    android:inputType="numberDecimal"/>
             </LinearLayout>
 
             <!-- REQUIRED Time -->
@@ -101,13 +111,18 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="6dp">
+                android:layout_marginTop="6dp"
+                android:clipToPadding="false">
 
                 <Spinner
                     android:id="@+id/spHour"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:background="@drawable/spinner_background"
+                    android:minHeight="48dp"
+                    android:elevation="4dp"
+                    android:outlineProvider="background"
                     android:entries="@array/time_hours_12"/>
 
                 <Spinner
@@ -116,6 +131,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
+                    android:background="@drawable/spinner_background"
+                    android:minHeight="48dp"
+                    android:elevation="4dp"
+                    android:outlineProvider="background"
                     android:entries="@array/time_minutes_00_59"/>
 
                 <Spinner
@@ -124,6 +143,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
+                    android:background="@drawable/spinner_background"
+                    android:minHeight="48dp"
+                    android:elevation="4dp"
+                    android:outlineProvider="background"
                     android:entries="@array/time_ampm"/>
             </LinearLayout>
 
@@ -131,6 +154,7 @@
                 android:id="@+id/etDestinationDescription"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Description"
                 android:layout_marginTop="10dp"
                 android:gravity="top"
@@ -149,18 +173,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
+        <ImageButton
             android:id="@+id/btnCancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cancel"
+            android:background="@android:color/transparent"
+            android:src="@drawable/cancel"
+            android:contentDescription="Cancel"
             android:layout_marginEnd="12dp"/>
 
-        <Button
+        <ImageButton
             android:id="@+id/btnSave"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Save"/>
+            android:background="@android:color/transparent"
+            android:src="@drawable/save"
+            android:contentDescription="Save"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -7,14 +7,14 @@
     android:layout_height="match_parent"
     tools:context=".splash">
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="SplashScreen"
-        android:textSize="30sp"
+    <pl.droidsonroids.gif.GifImageView
+        android:id="@+id/gifSplash"
+        android:layout_width="412dp"
+        android:layout_height="830dp"
+        android:src="@drawable/gala_splashscreen"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,40 +2,57 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvTitle"
-        android:layout_width="0dp"
+    <!-- Title Image -->
+    <ImageView
+        android:id="@+id/ivTitle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Templates"
-        android:textSize="22sp"
-        android:textStyle="bold"
+        android:src="@drawable/templates"
+        android:contentDescription="Templates Title"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <!-- Filter Button -->
+    <ImageButton
+        android:id="@+id/btnFilterTemplates"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:src="@drawable/filter"
+        android:contentDescription="Filter"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
+    <!-- Search Background Image -->
+    <ImageView
+        android:id="@+id/ivSearchBg"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitXY"
+        app:layout_constraintBottom_toBottomOf="@id/etSearchTemplates"
+        app:layout_constraintEnd_toEndOf="@id/etSearchTemplates"
+        app:layout_constraintStart_toStartOf="@id/etSearchTemplates"
+        app:layout_constraintTop_toTopOf="@id/etSearchTemplates"
+        app:srcCompat="@drawable/searchbox" />
+
+    <!-- Search Box -->
     <EditText
         android:id="@+id/etSearchTemplates"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Search template gala"
-        android:layout_marginTop="12dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        android:layout_marginTop="16dp"
+        android:background="@android:color/transparent"
+        android:padding="12dp"
+        android:textSize="14sp"
+        app:layout_constraintTop_toBottomOf="@id/ivTitle"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnFilterTemplates"/>
-
-    <Button
-        android:id="@+id/btnFilterTemplates"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Filter"
-        android:layout_marginStart="10dp"
-        app:layout_constraintTop_toTopOf="@id/etSearchTemplates"
-        app:layout_constraintBottom_toBottomOf="@id/etSearchTemplates"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <TextView

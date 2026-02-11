@@ -2,29 +2,23 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Cover -->
-    <ImageView
+    <!-- Combined Cover ImageButton -->
+    <ImageButton
         android:id="@+id/imgCover"
         android:layout_width="0dp"
-        android:layout_height="160dp"
+        android:layout_height="140dp"
         android:scaleType="centerCrop"
-        android:src="@drawable/ic_launcher_background"
+        android:src="@drawable/addphoto"
+        android:background="?attr/selectableItemBackground"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <Button
-        android:id="@+id/btnChangeCover"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Change Cover"
-        android:layout_margin="12dp"
-        app:layout_constraintBottom_toBottomOf="@id/imgCover"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        android:contentDescription="Edit trip cover" />
 
     <ScrollView
         android:id="@+id/scrollForm"
@@ -40,27 +34,33 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:clipToPadding="false">
 
-            <TextView
+            <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Edit Trip"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="12dp"/>
+                android:src="@drawable/edittrip"
+                android:layout_marginBottom="12dp"
+                android:contentDescription="Edit Trip Title" />
 
             <Spinner
                 android:id="@+id/spTripCategory"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/spinner_background"
+                android:minHeight="48dp"
+                android:elevation="4dp"
+                android:outlineProvider="background"
                 android:entries="@array/trip_categories"/>
 
             <EditText
                 android:id="@+id/etTripName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Trip name"
+                android:minHeight="48dp"
                 android:layout_marginTop="10dp"/>
 
             <!-- Location row -->
@@ -68,6 +68,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginTop="10dp">
 
                 <EditText
@@ -75,13 +76,18 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:background="@drawable/rounded_edittext"
+                    android:minHeight="48dp"
                     android:hint="Location"/>
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnTripSearchMap"
-                    android:text="Maps"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/location"
+                    android:contentDescription="Search Map"
+                    android:layout_marginStart="8dp"/>
             </LinearLayout>
 
             <!-- Budget toggle -->
@@ -114,6 +120,8 @@
                     android:id="@+id/etTripBudget"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_edittext"
+                    android:minHeight="48dp"
                     android:hint="Trip budget"
                     android:inputType="numberDecimal"/>
             </LinearLayout>
@@ -123,6 +131,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
                 android:layout_marginTop="10dp"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Description"
                 android:gravity="top"/>
 
@@ -139,18 +148,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
+        <ImageButton
             android:id="@+id/btnCancelTrip"
-            android:text="Cancel"
-            android:layout_marginEnd="12dp"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/cancel"
+            android:contentDescription="Cancel"
+            android:layout_marginEnd="12dp"/>
 
-        <Button
+        <ImageButton
             android:id="@+id/btnSaveTrip"
-            android:text="Save"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/save"
+            android:contentDescription="Save"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

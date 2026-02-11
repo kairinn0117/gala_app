@@ -2,35 +2,45 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/homeRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- App title -->
-    <TextView
-        android:id="@+id/tvAppTitle"
-        android:layout_width="0dp"
+    <!-- App title image -->
+    <ImageView
+        android:id="@+id/ivHomeTitle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="GALA!"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:layout_marginEnd="12dp"
+        android:src="@drawable/galadb"
+        android:contentDescription="GALA!"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnFilter"/>
+        app:layout_constraintStart_toStartOf="parent"/>
 
     <!-- Filter button -->
-    <Button
+    <ImageButton
         android:id="@+id/btnFilter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Filter"
-        app:layout_constraintTop_toTopOf="@id/tvAppTitle"
-        app:layout_constraintBottom_toBottomOf="@id/tvAppTitle"
+        android:background="@android:color/transparent"
+        android:src="@drawable/filter"
+        android:contentDescription="Filter"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Search Background Image -->
+    <ImageView
+        android:id="@+id/ivSearchBg"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitXY"
+        android:contentDescription="Search Background"
+        app:layout_constraintBottom_toBottomOf="@id/etSearch"
+        app:layout_constraintEnd_toEndOf="@id/etSearch"
+        app:layout_constraintStart_toStartOf="@id/etSearch"
+        app:layout_constraintTop_toTopOf="@id/etSearch"
+        app:srcCompat="@drawable/searchbox" />
 
     <!-- Search -->
     <EditText
@@ -38,17 +48,24 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Search planned trips"
-        android:layout_marginTop="12dp"
-        app:layout_constraintTop_toBottomOf="@id/tvAppTitle"
+        android:layout_marginTop="16dp"
+        android:background="@android:color/transparent"
+        android:padding="12dp"
+        android:textSize="14sp"
+        android:inputType="text"
+        android:importantForAutofill="no"
+        app:layout_constraintTop_toBottomOf="@id/ivHomeTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <!-- Planned Trips button -->
-    <Button
+    <ImageButton
         android:id="@+id/btnPlanned"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Scheduled Trips"
+        android:background="@android:color/transparent"
+        android:src="@drawable/scheduledtripsbtn"
+        android:contentDescription="Scheduled Trips"
         android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@id/etSearch"
         app:layout_constraintStart_toStartOf="parent"/>
@@ -78,15 +95,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <!-- FAB replaced with ImageButton for consistency with custom graphic -->
+    <ImageButton
         android:id="@+id/fabAddGala"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/addbtn"
         android:contentDescription="Add Gala"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@android:drawable/ic_input_add" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
