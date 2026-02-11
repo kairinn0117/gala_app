@@ -7,9 +7,9 @@ public class ScheduledTrip {
     public String location;
     public String cover_url;
 
-    public String scheduled_date;     // e.g. "2026-02-12"
-    public String scheduled_time;     // e.g. "09:00 AM"
-    public Long scheduled_at_millis;  // used for sorting
+    public String scheduled_date;           // "2026-02-12"
+    public String first_destination_time;   // "02:45 PM" (display)
+    public Long scheduled_sort_millis;      // date + first destination time millis (sort)
 
     public ScheduledTrip() {}
 }

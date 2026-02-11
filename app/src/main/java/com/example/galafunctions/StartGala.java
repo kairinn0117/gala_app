@@ -531,7 +531,15 @@ public class StartGala extends AppCompatActivity {
         btnEndTrip.setEnabled(false);
 
         Map<String, Object> updates = new HashMap<>();
+
+        // ✅ Finished (Gallery)
         updates.put("status", "COMPLETED");
+        updates.put("ended_at", Timestamp.now());
+
+        // ✅ NOT archived (kasi archived is separate bucket)
+        updates.put("is_archived", false);
+
+        // cleanup
         updates.put("active_at", null);
 
         db.collection("users")
@@ -540,6 +548,7 @@ public class StartGala extends AppCompatActivity {
                 .document(tripId)
                 .update(updates)
                 .addOnSuccessListener(unused -> {
+                    // balik home
                     Intent intent = new Intent(StartGala.this, MainActivity.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);

@@ -6,27 +6,29 @@ public class Trip {
     public String trip_name;
     public String location;
 
-    // kept for old compatibility (pwede blank na)
-    public String date;
-    public String time;
+    public String date; // old
+    public String time; // old
 
     public String cover_url;
 
-    // PLANNED / SCHEDULED / IN_PROGRESS / ARCHIVED
-    public String status;
-
+    public String status;         // PLANNED / SCHEDULED / IN_PROGRESS / ARCHIVED
     public Boolean is_template;
-
-    // ✅ add this kasi ginagamit sa search at UI
     public String trip_category;
-
-    // ✅ for archive logic
     public Boolean is_archived;
 
-    // optional (if you want later)
     public Boolean budget_enabled;
     public Double trip_budget;
     public Double total_spent;
+
+    // ✅ schedule fields
+    public String scheduled_date;               // set by PlanTrip
+    public String first_destination_time;       // set by earliest destination
+    public Long first_destination_start_millis; // set by earliest destination
+    public Long scheduled_sort_millis;          // used for sorting scheduled list
+
+    // keep for compatibility
+    public String scheduled_time;
+    public com.google.firebase.Timestamp ended_at;
 
     public Trip() {}
 }

@@ -119,7 +119,8 @@ public class ScheduledTripsActivity extends AppCompatActivity {
                 .document(uid)
                 .collection("trips")
                 .whereEqualTo("status", "SCHEDULED")
-                .orderBy("scheduled_at_millis", Query.Direction.ASCENDING)
+                .whereEqualTo("is_archived", false)
+                .orderBy("scheduled_sort_millis", Query.Direction.ASCENDING)
                 .addSnapshotListener((snap, e) -> {
                     if (e != null) {
                         Toast.makeText(this, "Load error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -130,11 +131,6 @@ public class ScheduledTripsActivity extends AppCompatActivity {
                     rawList.clear();
 
                     for (DocumentSnapshot doc : snap.getDocuments()) {
-
-                        // ✅ client-side filter for archived
-                        Boolean archived = doc.getBoolean("is_archived");
-                        if (archived != null && archived) continue;
-
                         ScheduledTrip t = doc.toObject(ScheduledTrip.class);
                         if (t != null) {
                             t.tripId = doc.getId();

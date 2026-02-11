@@ -42,14 +42,17 @@ public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdap
     public void onBindViewHolder(@NonNull VH h, int position) {
         ScheduledTrip t = list.get(position);
 
-        h.tvTripName.setText(t.trip_name != null ? t.trip_name : "Trip");
+        h.tvTripName.setText(!TextUtils.isEmpty(t.trip_name) ? t.trip_name : "Trip");
+        h.tvLocation.setText(!TextUtils.isEmpty(t.location) ? t.location : "—");
 
         String when = "";
         if (!TextUtils.isEmpty(t.scheduled_date)) when += t.scheduled_date;
-        if (!TextUtils.isEmpty(t.scheduled_time)) when += (when.isEmpty() ? "" : " • ") + t.scheduled_time;
-        h.tvScheduledWhen.setText(!when.isEmpty() ? ("Scheduled: " + when) : "Scheduled: —");
 
-        h.tvLocation.setText(!TextUtils.isEmpty(t.location) ? t.location : "—");
+        if (!TextUtils.isEmpty(t.first_destination_time)) {
+            when += (when.isEmpty() ? "" : " • ") + t.first_destination_time;
+        }
+
+        h.tvScheduledWhen.setText(!when.isEmpty() ? ("Scheduled: " + when) : "Scheduled: —");
 
         if (!TextUtils.isEmpty(t.cover_url)) {
             Glide.with(h.imgCover.getContext())

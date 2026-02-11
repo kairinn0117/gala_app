@@ -21,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 
@@ -28,20 +29,17 @@ public class TripActivity extends AppCompatActivity {
 
     private ImageView imgCover;
 
-    // Trip header
     private TextView tvTripName, tvTripDateTime, tvTripLocation;
     private TextView tvTripCategory, tvTemplateBadge, tvTripBudget;
-    private TextView btnEnableBudget; // TextView in XML
+    private TextView btnEnableBudget;
     private TextView tvEmptyDestinations;
 
     private Button btnStartTrip, btnAddDestination, btnBackTrip, btnEditTrip, btnPlanTrip;
     private RecyclerView rvDestinations;
 
-    // RecyclerView
     private DestinationAdapter destinationAdapter;
     private final ArrayList<Destination> destinationList = new ArrayList<>();
 
-    // Firebase
     private FirebaseAuth auth;
     private FirebaseFirestore db;
 
@@ -49,11 +47,8 @@ public class TripActivity extends AppCompatActivity {
 
     private boolean isTemplate = false;
     private boolean budgetEnabled = false;
+    private String tripStatus = "PLANNED";
 
-    // NEW: status control
-    private String tripStatus = "PLANNED"; // default
-
-    // Listener
     private ListenerRegistration destinationsListener;
 
     @Override
@@ -81,7 +76,6 @@ public class TripActivity extends AppCompatActivity {
             return;
         }
 
-        // Bind views
         imgCover = findViewById(R.id.imgCover);
 
         tvTripName = findViewById(R.id.tvTripName);
@@ -103,7 +97,6 @@ public class TripActivity extends AppCompatActivity {
         btnStartTrip = findViewById(R.id.btnStartTrip);
         btnBackTrip = findViewById(R.id.btnBackTrip);
 
-        // Recycler setup
         rvDestinations.setLayoutManager(new LinearLayoutManager(this));
 
         destinationAdapter = new DestinationAdapter(
@@ -123,7 +116,6 @@ public class TripActivity extends AppCompatActivity {
         );
         rvDestinations.setAdapter(destinationAdapter);
 
-        // Buttons
         btnBackTrip.setOnClickListener(v -> finish());
 
         btnAddDestination.setOnClickListener(v -> {
@@ -132,7 +124,7 @@ public class TripActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // ✅ Plan / Reschedule
+        // ✅ Plan / Reschedule (DATE ONLY)
         btnPlanTrip.setOnClickListener(v -> {
             Intent i = new Intent(TripActivity.this, PlanTripActivity.class);
             i.putExtra(PlanTripActivity.EXTRA_TRIP_ID, tripId);
@@ -146,12 +138,9 @@ public class TripActivity extends AppCompatActivity {
                 return;
             }
 
-            // PLANNED or SCHEDULED → open StartGala
             Intent intent = new Intent(TripActivity.this, StartGala.class);
             intent.putExtra("tripId", tripId);
             startActivity(intent);
-            // OPTIONAL: finish() if ayaw mo bumalik dito pag nag-back
-            // finish();
         });
 
         if (btnEnableBudget != null) {
@@ -172,7 +161,7 @@ public class TripActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadTripDetails(); // refresh header + reattach listener safely
+        loadTripDetails();
     }
 
     @Override
@@ -202,25 +191,23 @@ public class TripActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Base fields
                     String name = doc.getString("trip_name");
                     String location = doc.getString("location");
                     String coverUrl = doc.getString("cover_url");
                     String category = doc.getString("trip_category");
 
-                    // Old planned fields
-                    String date = doc.getString("date");
-                    String time = doc.getString("time");
+                    // planned fields (legacy)
+                    String plannedDate = doc.getString("date");
+                    String plannedTime = doc.getString("time");
 
-                    // Scheduled fields
+                    // scheduled fields (DATE ONLY + earliest destination time)
                     String scheduledDate = doc.getString("scheduled_date");
-                    String scheduledTime = doc.getString("scheduled_time");
+                    String firstTime = doc.getString("first_destination_time"); // ✅ main display time
+                    String fallbackScheduledTime = doc.getString("scheduled_time"); // compat (optional)
 
-                    // Status
                     String status = doc.getString("status");
                     tripStatus = !TextUtils.isEmpty(status) ? status.toUpperCase() : "PLANNED";
 
-                    // Flags
                     Boolean templateVal = doc.getBoolean("is_template");
                     Boolean budgetVal = doc.getBoolean("budget_enabled");
                     Double tripBudget = doc.getDouble("trip_budget");
@@ -228,33 +215,38 @@ public class TripActivity extends AppCompatActivity {
                     isTemplate = (templateVal != null && templateVal);
                     budgetEnabled = (budgetVal != null && budgetVal);
 
-                    // Set UI
                     tvTripName.setText(name != null ? name : "");
                     tvTripLocation.setText(location != null ? location : "");
                     tvTripCategory.setText(category != null ? category : "OTHER");
 
                     // ✅ Header datetime logic:
-                    // if SCHEDULED -> scheduled_date/time
-                    // else -> date/time
+                    // If SCHEDULED -> scheduled_date • earliest destination time
+                    // Else -> old planned date/time
                     String dt = "";
                     if ("SCHEDULED".equals(tripStatus)) {
                         if (!TextUtils.isEmpty(scheduledDate)) dt += scheduledDate;
-                        if (!TextUtils.isEmpty(scheduledTime)) dt += (dt.isEmpty() ? "" : " • ") + scheduledTime;
+
+                        String timeToShow = !TextUtils.isEmpty(firstTime)
+                                ? firstTime
+                                : (fallbackScheduledTime != null ? fallbackScheduledTime : "");
+
+                        if (!TextUtils.isEmpty(timeToShow)) {
+                            dt += (dt.isEmpty() ? "" : " • ") + timeToShow;
+                        }
                     } else {
-                        if (!TextUtils.isEmpty(date)) dt += date;
-                        if (!TextUtils.isEmpty(time)) dt += (dt.isEmpty() ? "" : " • ") + time;
+                        if (!TextUtils.isEmpty(plannedDate)) dt += plannedDate;
+                        if (!TextUtils.isEmpty(plannedTime)) dt += (dt.isEmpty() ? "" : " • ") + plannedTime;
                     }
-                    tvTripDateTime.setText(dt);
+                    tvTripDateTime.setText(dt.isEmpty() ? "—" : dt);
 
                     // ✅ Buttons logic
                     tvTemplateBadge.setVisibility(isTemplate ? View.VISIBLE : View.GONE);
 
                     if (isTemplate) {
                         btnStartTrip.setText("Activate");
-                        btnPlanTrip.setVisibility(View.GONE); // templates usually not schedulable
+                        btnPlanTrip.setVisibility(View.GONE);
                     } else {
                         btnPlanTrip.setVisibility(View.VISIBLE);
-
                         if ("SCHEDULED".equals(tripStatus)) {
                             btnPlanTrip.setText("Reschedule");
                             btnStartTrip.setText("Start Now");
@@ -270,7 +262,7 @@ public class TripActivity extends AppCompatActivity {
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.GONE);
 
                         String budgetText = (tripBudget != null)
-                                ? "Budget: ₱" + String.format("%.2f", tripBudget)
+                                ? "Budget: ₱" + String.format(java.util.Locale.getDefault(), "%.2f", tripBudget)
                                 : "Budget: ₱0.00";
                         tvTripBudget.setText(budgetText);
                     } else {
@@ -278,7 +270,7 @@ public class TripActivity extends AppCompatActivity {
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.VISIBLE);
                     }
 
-                    // Update adapter budget flag (recreate to be safe)
+                    // Recreate adapter with updated budget flag
                     destinationAdapter = new DestinationAdapter(
                             destinationList,
                             budgetEnabled,
@@ -310,11 +302,13 @@ public class TripActivity extends AppCompatActivity {
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
+        // ✅ order by start_time_millis so first destination is always on top
         destinationsListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
                 .document(tripId)
                 .collection("destinations")
+                .orderBy("start_time_millis", Query.Direction.ASCENDING)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null) {
                         Toast.makeText(this, "Destinations error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -323,7 +317,6 @@ public class TripActivity extends AppCompatActivity {
                     if (snapshots == null) return;
 
                     destinationList.clear();
-
                     for (DocumentSnapshot doc : snapshots.getDocuments()) {
                         Destination d = doc.toObject(Destination.class);
                         if (d != null) {

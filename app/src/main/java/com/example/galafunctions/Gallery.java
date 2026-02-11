@@ -1,64 +1,164 @@
 package com.example.galafunctions;
 
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link Gallery#newInstance} factory method to
- * create an instance of this fragment.
- */
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+
+import java.util.ArrayList;
+
 public class Gallery extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private FirebaseAuth auth;
+    private FirebaseFirestore db;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    private RecyclerView rvFinishedTrips;
+    private TextView tvEmptyFinished;
+    private EditText etGallerySearch;
+    private Button btnGalleryFilter;
 
-    public Gallery() {
-        // Required empty public constructor
-    }
+    private final ArrayList<Trip> rawList = new ArrayList<>();
+    private final ArrayList<Trip> displayList = new ArrayList<>();
+    private TripAdapter adapter;
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment Gallery.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static Gallery newInstance(String param1, String param2) {
-        Gallery fragment = new Gallery();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
+    private ListenerRegistration finishedListener;
+    private String searchQuery = "";
+
+    public Gallery() { }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
+        auth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+    }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+
+        View view = inflater.inflate(R.layout.fragment_gallery, container, false);
+
+        // ✅ Make sure these IDs exist in fragment_gallery.xml
+        rvFinishedTrips = view.findViewById(R.id.rvFinishedTrips);
+        tvEmptyFinished = view.findViewById(R.id.tvEmptyFinished);
+        etGallerySearch = view.findViewById(R.id.etGallerySearch);
+        btnGalleryFilter = view.findViewById(R.id.btnGalleryFilter);
+
+        rvFinishedTrips.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new TripAdapter(requireContext(), displayList);
+        rvFinishedTrips.setAdapter(adapter);
+
+        btnGalleryFilter.setOnClickListener(v ->
+                Toast.makeText(getContext(), "Filter next step.", Toast.LENGTH_SHORT).show()
+        );
+
+        etGallerySearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void afterTextChanged(Editable s) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchQuery = (s != null) ? s.toString().trim().toLowerCase() : "";
+                applySearch();
+            }
+        });
+
+        return view;
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_gallery, container, false);
+    public void onStart() {
+        super.onStart();
+        attachFinishedListener();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        detachListener();
+    }
+
+    private void attachFinishedListener() {
+        detachListener();
+
+        if (auth.getCurrentUser() == null) return;
+        String uid = auth.getCurrentUser().getUid();
+
+        // ✅ FINISHED = COMPLETED, NOT archived
+        finishedListener = db.collection("users")
+                .document(uid)
+                .collection("trips")
+                .whereEqualTo("status", "COMPLETED")
+                .whereEqualTo("is_archived", false)
+                .orderBy("ended_at", Query.Direction.DESCENDING) // best sorting for finished
+                .addSnapshotListener((snap, e) -> {
+                    if (e != null) {
+                        Toast.makeText(getContext(), "Load error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (snap == null) return;
+
+                    rawList.clear();
+
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        Trip t = doc.toObject(Trip.class);
+                        if (t != null) {
+                            t.tripId = doc.getId();
+                            rawList.add(t);
+                        }
+                    }
+
+                    applySearch();
+                });
+    }
+
+    private void applySearch() {
+        displayList.clear();
+
+        for (Trip t : rawList) {
+            if (t == null) continue;
+            if (matchesSearch(t)) displayList.add(t);
+        }
+
+        adapter.notifyDataSetChanged();
+        tvEmptyFinished.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean matchesSearch(Trip t) {
+        if (TextUtils.isEmpty(searchQuery)) return true;
+
+        String name = (t.trip_name != null) ? t.trip_name.toLowerCase() : "";
+        String loc  = (t.location != null) ? t.location.toLowerCase() : "";
+        String cat  = (t.trip_category != null) ? t.trip_category.toLowerCase() : "";
+
+        return name.contains(searchQuery) || loc.contains(searchQuery) || cat.contains(searchQuery);
+    }
+
+    private void detachListener() {
+        if (finishedListener != null) {
+            finishedListener.remove();
+            finishedListener = null;
+        }
     }
 }

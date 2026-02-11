@@ -53,7 +53,6 @@
                 android:layout_marginTop="6dp"
                 android:minHeight="48dp" />
 
-            <!-- Location row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -76,7 +75,6 @@
                     android:layout_marginStart="8dp"/>
             </LinearLayout>
 
-            <!-- Budget section (show/hide in Java based on trip budget_enabled) -->
             <LinearLayout
                 android:id="@+id/layoutDestinationBudget"
                 android:layout_width="match_parent"
@@ -95,7 +93,6 @@
                     android:minHeight="48dp"/>
             </LinearLayout>
 
-            <!-- ✅ Time (REQUIRED) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -124,7 +121,6 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom bar -->
     <LinearLayout
         android:id="@+id/bottomBar"
         android:layout_width="0dp"

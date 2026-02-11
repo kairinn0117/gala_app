@@ -1,11 +1,7 @@
 package com.example.galafunctions;
 
-import android.app.AlarmManager;
 import android.app.DatePickerDialog;
-import android.app.PendingIntent;
-import android.app.TimePickerDialog;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -32,7 +28,7 @@ public class PlanTripActivity extends AppCompatActivity {
 
     public static final String EXTRA_TRIP_ID = "tripId";
 
-    private EditText etPlanDate, etPlanTime;
+    private EditText etPlanDate;
     private Button btnCancel, btnSave;
 
     private FirebaseAuth auth;
@@ -40,12 +36,8 @@ public class PlanTripActivity extends AppCompatActivity {
 
     private String tripId;
 
-    // store picked values
     private int pickedYear, pickedMonth, pickedDay;
-    private int pickedHour24, pickedMinute;
-
     private boolean hasDate = false;
-    private boolean hasTime = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,13 +65,10 @@ public class PlanTripActivity extends AppCompatActivity {
         }
 
         etPlanDate = findViewById(R.id.etPlanDate);
-        etPlanTime = findViewById(R.id.etPlanTime);
         btnCancel = findViewById(R.id.btnCancel);
         btnSave = findViewById(R.id.btnSaveSchedule);
 
         etPlanDate.setOnClickListener(v -> showDatePicker());
-        etPlanTime.setOnClickListener(v -> showTimePicker());
-
         btnCancel.setOnClickListener(v -> finish());
         btnSave.setOnClickListener(v -> saveSchedule());
     }
@@ -103,63 +92,9 @@ public class PlanTripActivity extends AppCompatActivity {
                 c.get(Calendar.MONTH),
                 c.get(Calendar.DAY_OF_MONTH));
 
-        // ✅ IMPORTANT: disable past dates
+        // ✅ no past dates
         dialog.getDatePicker().setMinDate(System.currentTimeMillis());
-
         dialog.show();
-    }
-
-    private void showTimePicker() {
-
-        Calendar now = Calendar.getInstance();
-
-        new TimePickerDialog(this, (view, hourOfDay, minuteOfHour) -> {
-
-            if (hasDate) {
-
-                Calendar selected = Calendar.getInstance();
-                selected.set(pickedYear, pickedMonth, pickedDay,
-                        hourOfDay, minuteOfHour, 0);
-
-                // ✅ If today, block past time
-                if (selected.getTimeInMillis() <= System.currentTimeMillis()) {
-                    Toast.makeText(this,
-                            "Please choose a future time.",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
-
-            pickedHour24 = hourOfDay;
-            pickedMinute = minuteOfHour;
-            hasTime = true;
-
-            etPlanTime.setText(formatTo12Hour(hourOfDay, minuteOfHour));
-
-        },
-                now.get(Calendar.HOUR_OF_DAY),
-                now.get(Calendar.MINUTE),
-                false
-        ).show();
-    }
-
-    private String formatTo12Hour(int hourOfDay, int minute) {
-        String ampm = (hourOfDay >= 12) ? "PM" : "AM";
-        int hour12 = hourOfDay % 12;
-        if (hour12 == 0) hour12 = 12;
-        return String.format(Locale.getDefault(), "%02d:%02d %s", hour12, minute, ampm);
-    }
-
-    private long toMillis() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.YEAR, pickedYear);
-        cal.set(Calendar.MONTH, pickedMonth);
-        cal.set(Calendar.DAY_OF_MONTH, pickedDay);
-        cal.set(Calendar.HOUR_OF_DAY, pickedHour24);
-        cal.set(Calendar.MINUTE, pickedMinute);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return cal.getTimeInMillis();
     }
 
     private void saveSchedule() {
@@ -167,30 +102,23 @@ public class PlanTripActivity extends AppCompatActivity {
             Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
             return;
         }
-
         if (!hasDate) { etPlanDate.setError("Required"); return; }
-        if (!hasTime) { etPlanTime.setError("Required"); return; }
-
-        long scheduledMillis = toMillis();
-        long now = System.currentTimeMillis();
-
-        if (scheduledMillis <= now) {
-            Toast.makeText(this, "Please choose a future time.", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
         btnSave.setEnabled(false);
 
         String uid = auth.getCurrentUser().getUid();
         String dateStr = etPlanDate.getText().toString().trim();
-        String timeStr = etPlanTime.getText().toString().trim();
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "SCHEDULED");
         updates.put("scheduled_date", dateStr);
-        updates.put("scheduled_time", timeStr);
-        updates.put("scheduled_at_millis", scheduledMillis);
         updates.put("scheduled_at", Timestamp.now());
+
+        // NOTE: scheduled_time + scheduled_sort_millis will come from FIRST destination.
+        updates.put("scheduled_time", null);
+        updates.put("scheduled_sort_millis", null);
+        updates.put("first_destination_time", null);
+        updates.put("first_destination_start_millis", null);
 
         db.collection("users")
                 .document(uid)
@@ -198,11 +126,7 @@ public class PlanTripActivity extends AppCompatActivity {
                 .document(tripId)
                 .update(updates)
                 .addOnSuccessListener(unused -> {
-
-                    // ✅ schedule local notification
-                    scheduleReminder(tripId, scheduledMillis);
-
-                    Toast.makeText(this, "Trip scheduled! We'll remind you.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Trip scheduled date saved!", Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK, new Intent());
                     finish();
                 })
@@ -210,39 +134,5 @@ public class PlanTripActivity extends AppCompatActivity {
                     btnSave.setEnabled(true);
                     Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
-    }
-
-    private void scheduleReminder(String tripId, long scheduledMillis) {
-
-        // Android 13+: ask notification permission (simple version)
-        if (Build.VERSION.SDK_INT >= 33) {
-            // You can request permission in your main screen once; for now, just proceed.
-            // If permission denied, notification won't show.
-        }
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-
-        Intent intent = new Intent(this, ReminderReceiver.class);
-        intent.putExtra(ReminderReceiver.EXTRA_TITLE, "GALA Reminder");
-        intent.putExtra(ReminderReceiver.EXTRA_BODY, "Time to start your trip! Open the app and press Start.");
-
-        // unique requestCode per trip (stable)
-        int requestCode = tripId.hashCode();
-
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        if (alarmManager != null) {
-            // exact alarm (best for reminders)
-            alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    scheduledMillis,
-                    pendingIntent
-            );
-        }
     }
 }
