@@ -59,6 +59,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginTop="10dp">
 
                 <EditText
@@ -70,11 +71,13 @@
                     android:hint="Location"
                     android:inputType="text"/>
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnSearchMap"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Maps"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/location"
+                    android:contentDescription="Search Map"
                     android:layout_marginStart="8dp"/>
             </LinearLayout>
 
