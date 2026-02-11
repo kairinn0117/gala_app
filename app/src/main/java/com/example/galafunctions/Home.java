@@ -8,8 +8,8 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,12 +19,10 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 
@@ -37,8 +35,8 @@ public class Home extends Fragment {
     private TextView tvEmptyTrips;
     private EditText etSearch;
 
-    private Button btnFilter, btnPlanned;
-    private FloatingActionButton fabAddGala;
+    private ImageButton btnFilter, btnPlanned;
+    private ImageButton fabAddGala;
 
     private final ArrayList<Trip> rawList = new ArrayList<>();
     private final ArrayList<Trip> displayList = new ArrayList<>();
@@ -72,7 +70,6 @@ public class Home extends Fragment {
 
         rvTrips.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // NOTE: TripAdapter click logic should already go to TripActivity using tripId
         adapter = new TripAdapter(requireContext(), displayList);
         rvTrips.setAdapter(adapter);
 
@@ -80,7 +77,6 @@ public class Home extends Fragment {
                 startActivity(new Intent(getActivity(), CreateTrip.class))
         );
 
-        // ✅ UPDATED: btnPlanned now opens ScheduledTripsActivity (SCHEDULED list)
         btnPlanned.setOnClickListener(v -> {
             if (getActivity() == null) return;
             startActivity(new Intent(getActivity(), ScheduledTripsActivity.class));
@@ -107,7 +103,6 @@ public class Home extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        // Home stays as PLANNED list
         attachPlannedListener();
     }
 
@@ -128,7 +123,6 @@ public class Home extends Fragment {
                 .collection("trips")
                 .whereEqualTo("status", "PLANNED")
                 .whereEqualTo("is_archived", false)
-                .orderBy("created_at", Query.Direction.DESCENDING)
                 .addSnapshotListener((snap, e) -> {
                     if (e != null) {
                         Toast.makeText(getContext(), "Load error: " + e.getMessage(), Toast.LENGTH_SHORT).show();

@@ -7,65 +7,73 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- Title -->
-    <TextView
-        android:id="@+id/tvGalleryTitle"
-        android:layout_width="0dp"
+    <!-- Title Image -->
+    <ImageView
+        android:id="@+id/ivGalleryTitle"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Gallery"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:layout_marginEnd="12dp"
+        android:src="@drawable/gallery"
+        android:contentDescription="Gallery Title"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnGalleryFilter"/>
+        app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Filter button -->
-    <Button
+    <!-- Filter Button -->
+    <ImageButton
         android:id="@+id/btnGalleryFilter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Filter"
-        app:layout_constraintTop_toTopOf="@id/tvGalleryTitle"
-        app:layout_constraintBottom_toBottomOf="@id/tvGalleryTitle"
+        android:background="@android:color/transparent"
+        android:src="@drawable/filter"
+        android:contentDescription="Filter"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Search -->
+    <!-- Search Background Image -->
+    <ImageView
+        android:id="@+id/ivSearchBg"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitXY"
+        app:layout_constraintBottom_toBottomOf="@id/etGallerySearch"
+        app:layout_constraintEnd_toEndOf="@id/etGallerySearch"
+        app:layout_constraintStart_toStartOf="@id/etGallerySearch"
+        app:layout_constraintTop_toTopOf="@id/etGallerySearch"
+        app:srcCompat="@drawable/searchbox" />
+
+    <!-- Search Box -->
     <EditText
         android:id="@+id/etGallerySearch"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Search finished trips"
-        android:layout_marginTop="12dp"
-        app:layout_constraintTop_toBottomOf="@id/tvGalleryTitle"
+        android:layout_marginTop="16dp"
+        android:background="@android:color/transparent"
+        android:padding="12dp"
+        android:textSize="14sp"
+        app:layout_constraintTop_toBottomOf="@id/ivGalleryTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Empty state -->
     <TextView
         android:id="@+id/tvEmptyFinished"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="No finished trips yet."
-        android:visibility="gone"
         android:alpha="0.7"
-        android:layout_marginTop="10dp"
+        android:visibility="gone"
+        android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@id/etGallerySearch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvFinishedTrips"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:paddingBottom="16dp"
-        app:layout_constraintTop_toBottomOf="@id/tvEmptyFinished"
+        android:layout_marginTop="10dp"
+        app:layout_constraintTop_toBottomOf="@id/etGallerySearch"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

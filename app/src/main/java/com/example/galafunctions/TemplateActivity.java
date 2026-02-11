@@ -6,8 +6,8 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,7 +24,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 
@@ -36,7 +35,7 @@ public class TemplateActivity extends AppCompatActivity {
     private RecyclerView rvTemplates;
     private TextView tvEmptyTemplates;
     private EditText etSearch;
-    private Button btnFilter;
+    private ImageButton btnFilter;
 
     private final ArrayList<Trip> templates = new ArrayList<>();
     private TripAdapter adapter;
@@ -71,17 +70,13 @@ public class TemplateActivity extends AppCompatActivity {
         adapter = new TripAdapter(this, templates);
         rvTemplates.setAdapter(adapter);
 
-        // ✅ Click: open TripActivity (since your TripAdapter opens TripActivity already,
-        // you can skip RecyclerItemClickListener completely.
-        // If you still want custom click, comment out TripAdapter click inside adapter.)
-
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void afterTextChanged(Editable s) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchQuery = (s != null) ? s.toString().trim().toLowerCase() : "";
-                attachListener(); // reload (simple)
+                attachListener(); // reload
             }
         });
 

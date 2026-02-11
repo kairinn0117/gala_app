@@ -25,8 +25,8 @@ import java.util.UUID;
 
 public class CreateTrip extends AppCompatActivity {
 
-    private ImageView imgCover;
-    private Button btnChangeCover, btnCreate, btnCancel;
+    private ImageButton imgCover;
+    private ImageButton btnCreate, btnCancel;
 
     private EditText etTripName, etLocation, etBudget, etDescription;
     private Spinner spCategory;
@@ -41,7 +41,7 @@ public class CreateTrip extends AppCompatActivity {
 
     private ActivityResultLauncher<String> imagePicker;
     private ActivityResultLauncher<Intent> mapPickerLauncher;
-    private Button btnTripSearchMap;
+    private ImageButton btnTripSearchMap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +55,6 @@ public class CreateTrip extends AppCompatActivity {
 
         // Bind views
         imgCover = findViewById(R.id.imgCover);
-        btnChangeCover = findViewById(R.id.btnChangeCover);
         btnCreate = findViewById(R.id.btnCreateTrip);
         btnCancel = findViewById(R.id.btnCancelTrip);
 
@@ -82,13 +81,12 @@ public class CreateTrip extends AppCompatActivity {
                                 .centerCrop()
                                 .into(imgCover);
                     } else {
-                        imgCover.setImageResource(R.drawable.ic_launcher_background);
+                        imgCover.setImageResource(R.drawable.addphoto);
                     }
                 }
         );
 
         imgCover.setOnClickListener(v -> imagePicker.launch("image/*"));
-        btnChangeCover.setOnClickListener(v -> imagePicker.launch("image/*"));
 
         // Budget toggle
         swBudget.setOnCheckedChangeListener((b, checked) ->

@@ -5,8 +5,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -36,7 +36,7 @@ public class CreateDestination extends AppCompatActivity {
     private EditText etName, etLocation, etBudget, etDescription, etDestTime;
     private Spinner spType;
 
-    private Button btnSave, btnCancel;
+    private ImageButton btnSave, btnCancel;
     private LinearLayout layoutDestinationBudget;
 
     private FirebaseAuth auth;
@@ -100,7 +100,7 @@ public class CreateDestination extends AppCompatActivity {
         btnSave = findViewById(R.id.btnSaveDestination);
         btnCancel = findViewById(R.id.btnCancelDestination);
 
-        Button btnSearchMap = findViewById(R.id.btnSearchMap);
+        ImageButton btnSearchMap = findViewById(R.id.btnSearchMap);
 
         // time picker
         etDestTime.setOnClickListener(v -> showTimePicker());
