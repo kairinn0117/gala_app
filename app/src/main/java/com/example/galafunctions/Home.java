@@ -71,6 +71,8 @@ public class Home extends Fragment {
         fabAddGala = view.findViewById(R.id.fabAddGala);
 
         rvTrips.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        // NOTE: TripAdapter click logic should already go to TripActivity using tripId
         adapter = new TripAdapter(requireContext(), displayList);
         rvTrips.setAdapter(adapter);
 
@@ -78,7 +80,11 @@ public class Home extends Fragment {
                 startActivity(new Intent(getActivity(), CreateTrip.class))
         );
 
-        btnPlanned.setOnClickListener(v -> attachPlannedListener());
+        // ✅ UPDATED: btnPlanned now opens ScheduledTripsActivity (SCHEDULED list)
+        btnPlanned.setOnClickListener(v -> {
+            if (getActivity() == null) return;
+            startActivity(new Intent(getActivity(), ScheduledTripsActivity.class));
+        });
 
         btnFilter.setOnClickListener(v ->
                 Toast.makeText(getContext(), "Filter next step.", Toast.LENGTH_SHORT).show()
@@ -101,6 +107,7 @@ public class Home extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        // Home stays as PLANNED list
         attachPlannedListener();
     }
 
@@ -134,7 +141,7 @@ public class Home extends Fragment {
                     for (DocumentSnapshot doc : snap.getDocuments()) {
                         Trip t = doc.toObject(Trip.class);
                         if (t != null) {
-                            t.tripId = doc.getId(); // ✅ important for click redirect
+                            t.tripId = doc.getId();
                             rawList.add(t);
                         }
                     }
@@ -148,7 +155,6 @@ public class Home extends Fragment {
 
         for (Trip t : rawList) {
             if (t == null) continue;
-
             if (matchesSearch(t)) {
                 displayList.add(t);
             }

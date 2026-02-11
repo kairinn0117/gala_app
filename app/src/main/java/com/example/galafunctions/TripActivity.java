@@ -34,7 +34,7 @@ public class TripActivity extends AppCompatActivity {
     private TextView btnEnableBudget; // TextView in XML
     private TextView tvEmptyDestinations;
 
-    private Button btnStartTrip, btnAddDestination, btnBackTrip, btnEditTrip;
+    private Button btnStartTrip, btnAddDestination, btnBackTrip, btnEditTrip, btnPlanTrip;
     private RecyclerView rvDestinations;
 
     // RecyclerView
@@ -46,8 +46,12 @@ public class TripActivity extends AppCompatActivity {
     private FirebaseFirestore db;
 
     private String tripId;
+
     private boolean isTemplate = false;
     private boolean budgetEnabled = false;
+
+    // NEW: status control
+    private String tripStatus = "PLANNED"; // default
 
     // Listener
     private ListenerRegistration destinationsListener;
@@ -95,13 +99,13 @@ public class TripActivity extends AppCompatActivity {
 
         btnEditTrip = findViewById(R.id.btnEditTrip);
         btnAddDestination = findViewById(R.id.btnAddDestination);
+        btnPlanTrip = findViewById(R.id.btnPlanTrip);
         btnStartTrip = findViewById(R.id.btnStartTrip);
         btnBackTrip = findViewById(R.id.btnBackTrip);
 
         // Recycler setup
         rvDestinations.setLayoutManager(new LinearLayoutManager(this));
 
-        // Adapter (listener)
         destinationAdapter = new DestinationAdapter(
                 destinationList,
                 budgetEnabled,
@@ -128,20 +132,31 @@ public class TripActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        // ✅ Plan / Reschedule
+        btnPlanTrip.setOnClickListener(v -> {
+            Intent i = new Intent(TripActivity.this, PlanTripActivity.class);
+            i.putExtra(PlanTripActivity.EXTRA_TRIP_ID, tripId);
+            startActivity(i);
+        });
+
+        // ✅ Start / Activate / Start Now
         btnStartTrip.setOnClickListener(v -> {
             if (isTemplate) {
                 activateTrip();
-            } else {
-                Intent intent = new Intent(TripActivity.this, StartGala.class);
-                intent.putExtra("tripId", tripId);
-                startActivity(intent);
-                finish();
+                return;
             }
+
+            // PLANNED or SCHEDULED → open StartGala
+            Intent intent = new Intent(TripActivity.this, StartGala.class);
+            intent.putExtra("tripId", tripId);
+            startActivity(intent);
+            // OPTIONAL: finish() if ayaw mo bumalik dito pag nag-back
+            // finish();
         });
 
         if (btnEnableBudget != null) {
             btnEnableBudget.setOnClickListener(v ->
-                    Toast.makeText(this, "Enable Budgeting clicked (we'll add dialog next).", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Enable Budgeting clicked (dialog next).", Toast.LENGTH_SHORT).show()
             );
         }
 
@@ -151,7 +166,6 @@ public class TripActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Load header once
         loadTripDetails();
     }
 
@@ -188,13 +202,25 @@ public class TripActivity extends AppCompatActivity {
                         return;
                     }
 
+                    // Base fields
                     String name = doc.getString("trip_name");
                     String location = doc.getString("location");
-                    String date = doc.getString("date");
-                    String time = doc.getString("time");
                     String coverUrl = doc.getString("cover_url");
                     String category = doc.getString("trip_category");
 
+                    // Old planned fields
+                    String date = doc.getString("date");
+                    String time = doc.getString("time");
+
+                    // Scheduled fields
+                    String scheduledDate = doc.getString("scheduled_date");
+                    String scheduledTime = doc.getString("scheduled_time");
+
+                    // Status
+                    String status = doc.getString("status");
+                    tripStatus = !TextUtils.isEmpty(status) ? status.toUpperCase() : "PLANNED";
+
+                    // Flags
                     Boolean templateVal = doc.getBoolean("is_template");
                     Boolean budgetVal = doc.getBoolean("budget_enabled");
                     Double tripBudget = doc.getDouble("trip_budget");
@@ -202,22 +228,45 @@ public class TripActivity extends AppCompatActivity {
                     isTemplate = (templateVal != null && templateVal);
                     budgetEnabled = (budgetVal != null && budgetVal);
 
+                    // Set UI
                     tvTripName.setText(name != null ? name : "");
-
-                    String dt = "";
-                    if (!TextUtils.isEmpty(date)) dt += date;
-                    if (!TextUtils.isEmpty(time)) dt += (dt.isEmpty() ? "" : " • ") + time;
-                    tvTripDateTime.setText(dt);
-
                     tvTripLocation.setText(location != null ? location : "");
                     tvTripCategory.setText(category != null ? category : "OTHER");
 
-                    tvTemplateBadge.setVisibility(isTemplate ? View.VISIBLE : View.GONE);
-                    btnStartTrip.setText(isTemplate ? "Activate" : "Start");
+                    // ✅ Header datetime logic:
+                    // if SCHEDULED -> scheduled_date/time
+                    // else -> date/time
+                    String dt = "";
+                    if ("SCHEDULED".equals(tripStatus)) {
+                        if (!TextUtils.isEmpty(scheduledDate)) dt += scheduledDate;
+                        if (!TextUtils.isEmpty(scheduledTime)) dt += (dt.isEmpty() ? "" : " • ") + scheduledTime;
+                    } else {
+                        if (!TextUtils.isEmpty(date)) dt += date;
+                        if (!TextUtils.isEmpty(time)) dt += (dt.isEmpty() ? "" : " • ") + time;
+                    }
+                    tvTripDateTime.setText(dt);
 
+                    // ✅ Buttons logic
+                    tvTemplateBadge.setVisibility(isTemplate ? View.VISIBLE : View.GONE);
+
+                    if (isTemplate) {
+                        btnStartTrip.setText("Activate");
+                        btnPlanTrip.setVisibility(View.GONE); // templates usually not schedulable
+                    } else {
+                        btnPlanTrip.setVisibility(View.VISIBLE);
+
+                        if ("SCHEDULED".equals(tripStatus)) {
+                            btnPlanTrip.setText("Reschedule");
+                            btnStartTrip.setText("Start Now");
+                        } else {
+                            btnPlanTrip.setText("Plan Trip");
+                            btnStartTrip.setText("Start");
+                        }
+                    }
+
+                    // Budget UI
                     if (budgetEnabled) {
                         tvTripBudget.setVisibility(View.VISIBLE);
-                        if (btnEnableBudget != null) btnEnableBudget.setHapticFeedbackEnabled(false);
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.GONE);
 
                         String budgetText = (tripBudget != null)
@@ -229,7 +278,7 @@ public class TripActivity extends AppCompatActivity {
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.VISIBLE);
                     }
 
-                    // update adapter setting (budgetEnabled)
+                    // Update adapter budget flag (recreate to be safe)
                     destinationAdapter = new DestinationAdapter(
                             destinationList,
                             budgetEnabled,
@@ -238,7 +287,6 @@ public class TripActivity extends AppCompatActivity {
                                     Toast.makeText(this, "Destination not found.", Toast.LENGTH_SHORT).show();
                                     return;
                                 }
-
                                 Intent i = new Intent(TripActivity.this, EditDestinationActivity.class);
                                 i.putExtra(EditDestinationActivity.EXTRA_TRIP_ID, tripId);
                                 i.putExtra(EditDestinationActivity.EXTRA_DEST_ID, destination.destinationId);
@@ -247,11 +295,8 @@ public class TripActivity extends AppCompatActivity {
                     );
                     rvDestinations.setAdapter(destinationAdapter);
 
-                    if (!TextUtils.isEmpty(coverUrl)) {
-                        loadImageFromUrl(coverUrl);
-                    }
+                    if (!TextUtils.isEmpty(coverUrl)) loadImageFromUrl(coverUrl);
 
-                    // attach listener once
                     attachDestinationsListener();
                 })
                 .addOnFailureListener(e ->
@@ -318,6 +363,8 @@ public class TripActivity extends AppCompatActivity {
                     tvTemplateBadge.setVisibility(View.GONE);
                     btnStartTrip.setText("Start");
                     btnStartTrip.setEnabled(true);
+                    btnPlanTrip.setVisibility(View.VISIBLE);
+                    btnPlanTrip.setText("Plan Trip");
                     Toast.makeText(this, "Trip activated!", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
@@ -338,7 +385,6 @@ public class TripActivity extends AppCompatActivity {
                 android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(input);
 
                 runOnUiThread(() -> imgCover.setImageBitmap(bitmap));
-
             } catch (Exception e) {
                 e.printStackTrace();
             }

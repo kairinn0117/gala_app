@@ -12,6 +12,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -52,6 +53,7 @@ public class CreateTrip extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
 
+        // Bind views
         imgCover = findViewById(R.id.imgCover);
         btnChangeCover = findViewById(R.id.btnChangeCover);
         btnCreate = findViewById(R.id.btnCreateTrip);
@@ -66,26 +68,34 @@ public class CreateTrip extends AppCompatActivity {
         swBudget = findViewById(R.id.swBudgetEnabled);
         layoutBudget = findViewById(R.id.layoutBudgetSection);
 
+        btnTripSearchMap = findViewById(R.id.btnTripSearchMap);
+
+        // ✅ Image picker (Glide preview = no ANR)
         imagePicker = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     selectedImageUri = uri;
-                    if (uri != null) imgCover.setImageURI(uri);
+
+                    if (uri != null) {
+                        Glide.with(CreateTrip.this)
+                                .load(uri)
+                                .centerCrop()
+                                .into(imgCover);
+                    } else {
+                        imgCover.setImageResource(R.drawable.ic_launcher_background);
+                    }
                 }
         );
 
         imgCover.setOnClickListener(v -> imagePicker.launch("image/*"));
         btnChangeCover.setOnClickListener(v -> imagePicker.launch("image/*"));
 
+        // Budget toggle
         swBudget.setOnCheckedChangeListener((b, checked) ->
                 layoutBudget.setVisibility(checked ? View.VISIBLE : View.GONE)
         );
 
-        btnCancel.setOnClickListener(v -> finish());
-        btnCreate.setOnClickListener(v -> createTrip());
-
-        btnTripSearchMap = findViewById(R.id.btnTripSearchMap);
-
+        // ✅ Map picker
         mapPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -99,26 +109,12 @@ public class CreateTrip extends AppCompatActivity {
         );
 
         btnTripSearchMap.setOnClickListener(v -> {
-            Intent intent = new Intent(this, MapPickerActivity.class);
-            mapPickerLauncher.launch(intent);
-        });btnTripSearchMap = findViewById(R.id.btnTripSearchMap);
-
-        mapPickerLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
-                        if (!TextUtils.isEmpty(address)) {
-                            etLocation.setText(address);
-                        }
-                    }
-                }
-        );
-
-        btnTripSearchMap.setOnClickListener(v -> {
-            Intent intent = new Intent(this, MapPickerActivity.class);
+            Intent intent = new Intent(CreateTrip.this, MapPickerActivity.class);
             mapPickerLauncher.launch(intent);
         });
+
+        btnCancel.setOnClickListener(v -> finish());
+        btnCreate.setOnClickListener(v -> createTrip());
     }
 
     private void createTrip() {
@@ -128,7 +124,7 @@ public class CreateTrip extends AppCompatActivity {
 
         String name = etTripName.getText().toString().trim();
         String location = etLocation.getText().toString().trim();
-        String category = spCategory.getSelectedItem().toString();
+        String category = (spCategory.getSelectedItem() != null) ? spCategory.getSelectedItem().toString() : "";
         boolean budgetEnabled = swBudget.isChecked();
 
         if (TextUtils.isEmpty(name)) { etTripName.setError("Required"); return; }
@@ -146,14 +142,14 @@ public class CreateTrip extends AppCompatActivity {
             }
         }
 
+        btnCreate.setEnabled(false);
+
         String tripId = db.collection("tmp").document().getId();
 
         Map<String, Object> trip = new HashMap<>();
         trip.put("trip_name", name);
         trip.put("trip_category", category);
         trip.put("location", location);
-
-        // ✅ removed people_count
 
         trip.put("budget_enabled", budgetEnabled);
         trip.put("trip_budget", budget);
@@ -162,8 +158,8 @@ public class CreateTrip extends AppCompatActivity {
         trip.put("status", "PLANNED");
         trip.put("is_archived", false);
         trip.put("created_at", Timestamp.now());
-        trip.put("date", "");
-        trip.put("time", "");
+        trip.put("scheduled_date", "");
+        trip.put("scheduled_time", "");
 
         if (selectedImageUri == null) {
             saveTrip(uid, tripId, trip);
@@ -180,9 +176,10 @@ public class CreateTrip extends AppCompatActivity {
                     trip.put("cover_url", uri.toString());
                     saveTrip(uid, tripId, trip);
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+                .addOnFailureListener(e -> {
+                    btnCreate.setEnabled(true);
+                    Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void saveTrip(String uid, String tripId, Map<String, Object> trip) {
@@ -197,8 +194,9 @@ public class CreateTrip extends AppCompatActivity {
                     startActivity(i);
                     finish();
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+                .addOnFailureListener(e -> {
+                    btnCreate.setEnabled(true);
+                    Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

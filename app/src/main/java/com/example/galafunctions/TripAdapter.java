@@ -2,8 +2,6 @@ package com.example.galafunctions;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,9 +12,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import com.bumptech.glide.Glide;
+
 import java.util.List;
 
 public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripVH> {
@@ -52,14 +49,20 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripVH> {
         holder.datetime.setText(dt.isEmpty() ? "—" : dt);
         holder.loc.setText(trip.location != null ? trip.location : "");
 
+        // ✅ Cover (Glide)
         if (!TextUtils.isEmpty(trip.cover_url)) {
-            loadImageNative(trip.cover_url, holder.cover);
+            Glide.with(holder.cover.getContext())
+                    .load(trip.cover_url)
+                    .centerCrop()
+                    .placeholder(R.drawable.baseline_broken_image_24)
+                    .error(R.drawable.baseline_broken_image_24)
+                    .into(holder.cover);
         } else {
             holder.cover.setImageResource(R.drawable.baseline_broken_image_24);
         }
 
         holder.itemView.setOnClickListener(v -> {
-            if (trip.tripId == null) return; // safety
+            if (trip.tripId == null) return;
 
             Intent intent = new Intent(context, TripActivity.class);
             intent.putExtra("tripId", trip.tripId);
@@ -83,19 +86,5 @@ public class TripAdapter extends RecyclerView.Adapter<TripAdapter.TripVH> {
             loc = itemView.findViewById(R.id.loc_txt);
             cover = itemView.findViewById(R.id.imageView2);
         }
-    }
-
-    private void loadImageNative(String imageUrl, ImageView target) {
-        new Thread(() -> {
-            try {
-                URL url = new URL(imageUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setDoInput(true);
-                conn.connect();
-                InputStream input = conn.getInputStream();
-                Bitmap bitmap = BitmapFactory.decodeStream(input);
-                target.post(() -> target.setImageBitmap(bitmap));
-            } catch (Exception ignored) {}
-        }).start();
     }
 }

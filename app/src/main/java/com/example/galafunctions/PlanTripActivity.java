@@ -86,33 +86,61 @@ public class PlanTripActivity extends AppCompatActivity {
 
     private void showDatePicker() {
         Calendar c = Calendar.getInstance();
-        int year = c.get(Calendar.YEAR);
-        int month = c.get(Calendar.MONTH);
-        int day = c.get(Calendar.DAY_OF_MONTH);
 
-        new DatePickerDialog(this, (view, y, m, d) -> {
+        DatePickerDialog dialog = new DatePickerDialog(this, (view, y, m, d) -> {
+
             pickedYear = y;
-            pickedMonth = m; // 0-based
+            pickedMonth = m;
             pickedDay = d;
             hasDate = true;
 
-            String pickedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", y, (m + 1), d);
+            String pickedDate = String.format(Locale.getDefault(),
+                    "%04d-%02d-%02d", y, (m + 1), d);
+
             etPlanDate.setText(pickedDate);
-        }, year, month, day).show();
+
+        }, c.get(Calendar.YEAR),
+                c.get(Calendar.MONTH),
+                c.get(Calendar.DAY_OF_MONTH));
+
+        // ✅ IMPORTANT: disable past dates
+        dialog.getDatePicker().setMinDate(System.currentTimeMillis());
+
+        dialog.show();
     }
 
     private void showTimePicker() {
-        Calendar c = Calendar.getInstance();
-        int hour = c.get(Calendar.HOUR_OF_DAY);
-        int minute = c.get(Calendar.MINUTE);
+
+        Calendar now = Calendar.getInstance();
 
         new TimePickerDialog(this, (view, hourOfDay, minuteOfHour) -> {
+
+            if (hasDate) {
+
+                Calendar selected = Calendar.getInstance();
+                selected.set(pickedYear, pickedMonth, pickedDay,
+                        hourOfDay, minuteOfHour, 0);
+
+                // ✅ If today, block past time
+                if (selected.getTimeInMillis() <= System.currentTimeMillis()) {
+                    Toast.makeText(this,
+                            "Please choose a future time.",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
             pickedHour24 = hourOfDay;
             pickedMinute = minuteOfHour;
             hasTime = true;
 
             etPlanTime.setText(formatTo12Hour(hourOfDay, minuteOfHour));
-        }, hour, minute, false).show();
+
+        },
+                now.get(Calendar.HOUR_OF_DAY),
+                now.get(Calendar.MINUTE),
+                false
+        ).show();
     }
 
     private String formatTo12Hour(int hourOfDay, int minute) {

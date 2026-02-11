@@ -102,32 +102,15 @@
                 android:text="Time"
                 android:layout_marginTop="10dp"/>
 
-            <LinearLayout
+            <EditText
+                android:id="@+id/etDestTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="6dp">
-
-                <Spinner
-                    android:id="@+id/spHour"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"/>
-
-                <Spinner
-                    android:id="@+id/spMinute"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"/>
-
-                <Spinner
-                    android:id="@+id/spAmPm"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"/>
-            </LinearLayout>
+                android:hint="Pick time"
+                android:focusable="false"
+                android:clickable="true"
+                android:minHeight="48dp"
+                android:layout_marginTop="6dp"/>
 
             <EditText
                 android:id="@+id/etDestinationDescription"

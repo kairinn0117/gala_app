@@ -1,10 +1,10 @@
 package com.example.galafunctions;
 
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -22,8 +22,10 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -31,11 +33,8 @@ import java.util.Map;
 public class CreateDestination extends AppCompatActivity {
 
     // Basic fields
-    private EditText etName, etLocation, etBudget, etDescription;
+    private EditText etName, etLocation, etBudget, etDescription, etDestTime;
     private Spinner spType;
-
-    // Time spinners (REQUIRED)
-    private Spinner spHour, spMinute, spAmPm;
 
     private Button btnSave, btnCancel;
     private LinearLayout layoutDestinationBudget;
@@ -45,6 +44,22 @@ public class CreateDestination extends AppCompatActivity {
 
     private String tripId;
     private boolean budgetEnabled = false;
+
+    // Map picked coords (optional)
+    private Double pickedLat = null;
+    private Double pickedLng = null;
+
+    // Time picker
+    private int pickedHour24, pickedMinute;
+    private boolean hasTime = false;
+
+    // ✅ NEW: sequencing support
+    private long baseDateMillis = -1L;      // midnight of trip date
+    private long minAllowedMillis = -1L;    // lastEnd + 1 minute OR now (if today)
+    private boolean baseLoaded = false;
+
+    // duration per destination (for end_time_millis)
+    private static final int DEFAULT_DURATION_MINUTES = 60;
 
     private ActivityResultLauncher<Intent> mapPickerLauncher;
 
@@ -66,9 +81,8 @@ public class CreateDestination extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // TripId must exist
         tripId = getIntent().getStringExtra("tripId");
-        if (tripId == null || tripId.trim().isEmpty()) {
+        if (TextUtils.isEmpty(tripId)) {
             Toast.makeText(this, "Missing tripId.", Toast.LENGTH_SHORT).show();
             finish();
             return;
@@ -77,94 +91,184 @@ public class CreateDestination extends AppCompatActivity {
         // Bind views
         etName = findViewById(R.id.etDestinationName);
         spType = findViewById(R.id.spDestinationType);
-
         etLocation = findViewById(R.id.etDestinationLocation);
-        Button btnSearchMap = findViewById(R.id.btnSearchMap);
+        etDescription = findViewById(R.id.etDestinationDescription);
+        etDestTime = findViewById(R.id.etDestTime);
 
         layoutDestinationBudget = findViewById(R.id.layoutDestinationBudget);
         etBudget = findViewById(R.id.etDestinationBudget);
 
-        // Time spinners
-        spHour = findViewById(R.id.spHour);
-        spMinute = findViewById(R.id.spMinute);
-        spAmPm = findViewById(R.id.spAmPm);
-
-        etDescription = findViewById(R.id.etDestinationDescription);
-
         btnSave = findViewById(R.id.btnSaveDestination);
         btnCancel = findViewById(R.id.btnCancelDestination);
 
-        // ✅ populate time spinners
-        populateTimeSpinners();
+        Button btnSearchMap = findViewById(R.id.btnSearchMap);
 
-        // Map picker result
+        // ⏰ Time picker
+        etDestTime.setOnClickListener(v -> showTimePicker());
+
+        // Map picker
         mapPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+
+                        String address = result.getData()
+                                .getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+
+                        double lat = result.getData().getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LAT, 0);
+                        double lng = result.getData().getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LNG, 0);
+
                         if (!TextUtils.isEmpty(address)) {
                             etLocation.setText(address);
-                        } else {
-                            Toast.makeText(this, "No address selected.", Toast.LENGTH_SHORT).show();
                         }
+
+                        // optional coords (for directions)
+                        pickedLat = lat;
+                        pickedLng = lng;
                     }
                 }
         );
 
-        // ✅ open map picker
-        btnSearchMap.setOnClickListener(v -> {
-            Intent intent = new Intent(CreateDestination.this, MapPickerActivity.class);
-            mapPickerLauncher.launch(intent);
-        });
+        btnSearchMap.setOnClickListener(v ->
+                mapPickerLauncher.launch(new Intent(CreateDestination.this, MapPickerActivity.class))
+        );
 
-        // Cancel
         btnCancel.setOnClickListener(v -> finish());
 
-        // Read trip settings (budget_enabled)
         loadTripSettings();
+        loadTripBaseDateAndMinTime(); // ✅ NEW
 
-        // Save
         btnSave.setOnClickListener(v -> saveDestination());
     }
 
-    private void populateTimeSpinners() {
-        // Hours: 1-12
-        ArrayList<String> hours = new ArrayList<>();
-        hours.add("HH");
-        for (int h = 1; h <= 12; h++) hours.add(String.valueOf(h));
+    // ✅ NEW: load trip date + last destination end_time_millis
+    private void loadTripBaseDateAndMinTime() {
+        if (auth.getCurrentUser() == null) return;
+        String uid = auth.getCurrentUser().getUid();
 
-        // Minutes: 00-59
-        ArrayList<String> minutes = new ArrayList<>();
-        minutes.add("MM");
-        for (int m = 0; m < 60; m++) minutes.add(String.format(Locale.getDefault(), "%02d", m));
+        db.collection("users")
+                .document(uid)
+                .collection("trips")
+                .document(tripId)
+                .get()
+                .addOnSuccessListener(tripDoc -> {
 
-        // AM/PM
-        ArrayList<String> ampm = new ArrayList<>();
-        ampm.add("AM/PM");
-        ampm.add("AM");
-        ampm.add("PM");
+                    // get trip date string
+                    String dateStr = tripDoc.getString("scheduled_date");
+                    if (TextUtils.isEmpty(dateStr)) dateStr = tripDoc.getString("date");
 
-        ArrayAdapter<String> hourAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, hours);
-        ArrayAdapter<String> minuteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, minutes);
-        ArrayAdapter<String> ampmAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, ampm);
+                    baseDateMillis = parseDateToMidnightMillis(dateStr);
+                    if (baseDateMillis <= 0) {
+                        // fallback: today midnight
+                        Calendar cal = Calendar.getInstance();
+                        cal.set(Calendar.HOUR_OF_DAY, 0);
+                        cal.set(Calendar.MINUTE, 0);
+                        cal.set(Calendar.SECOND, 0);
+                        cal.set(Calendar.MILLISECOND, 0);
+                        baseDateMillis = cal.getTimeInMillis();
+                    }
 
-        spHour.setAdapter(hourAdapter);
-        spMinute.setAdapter(minuteAdapter);
-        spAmPm.setAdapter(ampmAdapter);
+                    // now check last destination end time
+                    db.collection("users")
+                            .document(uid)
+                            .collection("trips")
+                            .document(tripId)
+                            .collection("destinations")
+                            .orderBy("end_time_millis", Query.Direction.DESCENDING)
+                            .limit(1)
+                            .get()
+                            .addOnSuccessListener(qs -> {
 
-        // default to placeholders
-        spHour.setSelection(0);
-        spMinute.setSelection(0);
-        spAmPm.setSelection(0);
+                                long candidateMin = baseDateMillis; // default earliest is trip day start
+
+                                if (!qs.isEmpty()) {
+                                    Long lastEnd = qs.getDocuments().get(0).getLong("end_time_millis");
+                                    if (lastEnd != null && lastEnd > 0) {
+                                        candidateMin = lastEnd + 60000; // +1 min rule
+                                    } else {
+                                        // fallback if old destinations don't have end_time_millis
+                                        // use their start_time_millis + 60 min
+                                        Long lastStart = qs.getDocuments().get(0).getLong("start_time_millis");
+                                        if (lastStart != null && lastStart > 0) {
+                                            candidateMin = lastStart + (DEFAULT_DURATION_MINUTES * 60_000L) + 60000;
+                                        }
+                                    }
+                                }
+
+                                // if trip date is today -> also block past time
+                                long now = System.currentTimeMillis();
+                                if (isSameDay(now, baseDateMillis)) {
+                                    if (candidateMin < now) candidateMin = now;
+                                }
+
+                                minAllowedMillis = candidateMin;
+                                baseLoaded = true;
+                            })
+                            .addOnFailureListener(e -> {
+                                baseLoaded = true;
+                                minAllowedMillis = -1;
+                            });
+
+                })
+                .addOnFailureListener(e -> {
+                    baseLoaded = true;
+                    minAllowedMillis = -1;
+                });
+    }
+
+    // ⏰ TimePickerDialog with sequential validation
+    private void showTimePicker() {
+        if (!baseLoaded) {
+            Toast.makeText(this, "Loading time rules… try again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Calendar c = Calendar.getInstance();
+        int hour = c.get(Calendar.HOUR_OF_DAY);
+        int minute = c.get(Calendar.MINUTE);
+
+        new TimePickerDialog(this, (view, hourOfDay, minuteOfHour) -> {
+
+            long selectedMillis = toMillisOnTripDate(hourOfDay, minuteOfHour);
+
+            // ✅ sequential validation
+            if (minAllowedMillis > 0 && selectedMillis < minAllowedMillis) {
+                Toast.makeText(
+                        this,
+                        "Time must be after previous destination.",
+                        Toast.LENGTH_LONG
+                ).show();
+                return;
+            }
+
+            pickedHour24 = hourOfDay;
+            pickedMinute = minuteOfHour;
+            hasTime = true;
+
+            etDestTime.setText(formatTo12Hour(hourOfDay, minuteOfHour));
+
+        }, hour, minute, false).show();
+    }
+
+    private long toMillisOnTripDate(int hour24, int minute) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(baseDateMillis > 0 ? baseDateMillis : System.currentTimeMillis());
+        cal.set(Calendar.HOUR_OF_DAY, hour24);
+        cal.set(Calendar.MINUTE, minute);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
+    }
+
+    private String formatTo12Hour(int hourOfDay, int minute) {
+        String ampm = (hourOfDay >= 12) ? "PM" : "AM";
+        int hour12 = hourOfDay % 12;
+        if (hour12 == 0) hour12 = 12;
+        return String.format(Locale.getDefault(), "%02d:%02d %s", hour12, minute, ampm);
     }
 
     private void loadTripSettings() {
-        if (auth.getCurrentUser() == null) {
-            Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
+        if (auth.getCurrentUser() == null) return;
 
         String uid = auth.getCurrentUser().getUid();
 
@@ -175,86 +279,86 @@ public class CreateDestination extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(doc -> {
                     Boolean b = doc.getBoolean("budget_enabled");
-                    budgetEnabled = (b != null && b);
-
-                    layoutDestinationBudget.setVisibility(budgetEnabled ? View.VISIBLE : View.GONE);
+                    budgetEnabled = b != null && b;
+                    layoutDestinationBudget.setVisibility(
+                            budgetEnabled ? View.VISIBLE : View.GONE
+                    );
 
                     if (!budgetEnabled) {
                         etBudget.setText("");
                         etBudget.setError(null);
                     }
-                })
-                .addOnFailureListener(e -> {
-                    budgetEnabled = false;
-                    layoutDestinationBudget.setVisibility(View.GONE);
                 });
     }
 
     private void saveDestination() {
-        if (auth.getCurrentUser() == null) {
-            Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (auth.getCurrentUser() == null) return;
 
         String uid = auth.getCurrentUser().getUid();
 
         String name = etName.getText().toString().trim();
-        String type = (spType.getSelectedItem() != null) ? spType.getSelectedItem().toString().trim() : "";
         String location = etLocation.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
+        String type = (spType.getSelectedItem() != null) ? spType.getSelectedItem().toString() : "";
 
-        // Required time from spinners
-        String hour = String.valueOf(spHour.getSelectedItem());
-        String minute = String.valueOf(spMinute.getSelectedItem());
-        String ampm = String.valueOf(spAmPm.getSelectedItem());
-
-        // Validation
         if (TextUtils.isEmpty(name)) { etName.setError("Required"); return; }
         if (TextUtils.isEmpty(location)) { etLocation.setError("Required"); return; }
-
-        // ✅ must not be placeholder
-        if ("HH".equals(hour) || "MM".equals(minute) || "AM/PM".equals(ampm)) {
-            Toast.makeText(this, "Please select a valid time.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        String time = hour + ":" + minute + " " + ampm;
+        if (!hasTime) { etDestTime.setError("Pick time"); return; }
 
         Double budget = null;
         if (budgetEnabled) {
-            String budgetStr = etBudget.getText().toString().trim();
-            if (TextUtils.isEmpty(budgetStr)) {
+            String b = etBudget.getText().toString().trim();
+            if (TextUtils.isEmpty(b)) {
                 etBudget.setError("Required");
                 return;
             }
             try {
-                budget = Double.parseDouble(budgetStr);
+                budget = Double.parseDouble(b);
                 if (budget < 0) {
                     etBudget.setError("Must be 0 or more");
                     return;
                 }
             } catch (Exception e) {
-                etBudget.setError("Number only");
+                etBudget.setError("Invalid number");
                 return;
             }
         }
 
-        btnSave.setEnabled(false);
+        // ✅ compute millis
+        long startMillis = toMillisOnTripDate(pickedHour24, pickedMinute);
+        long endMillis = startMillis + (DEFAULT_DURATION_MINUTES * 60_000L);
 
-        String destinationId = db.collection("tmp").document().getId();
+        // final safety check (in case changed habang naka-open)
+        if (minAllowedMillis > 0 && startMillis < minAllowedMillis) {
+            Toast.makeText(this, "Time must be after previous destination.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        btnSave.setEnabled(false);
 
         Map<String, Object> destination = new HashMap<>();
         destination.put("destination_name", name);
         destination.put("type", type);
         destination.put("location", location);
-        destination.put("time", time); // ✅ destination start time
+        destination.put("time", etDestTime.getText().toString());
+
+        // ✅ NEW FIELDS
+        destination.put("start_time_millis", startMillis);
+        destination.put("end_time_millis", endMillis);
+
+        // optional coords
+        if (pickedLat != null && pickedLng != null) {
+            destination.put("lat", pickedLat);
+            destination.put("lng", pickedLng);
+        }
+
         destination.put("description", description);
         destination.put("status", "PENDING");
         destination.put("created_at", Timestamp.now());
 
         if (budgetEnabled && budget != null) {
             destination.put("budget", budget);
-            destination.put("spent", 0.0);
+            destination.put("spent_total", 0.0); // match StartGala field
         }
 
         db.collection("users")
@@ -262,15 +366,45 @@ public class CreateDestination extends AppCompatActivity {
                 .collection("trips")
                 .document(tripId)
                 .collection("destinations")
-                .document(destinationId)
-                .set(destination)
+                .add(destination)
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(this, "Destination saved!", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     btnSave.setEnabled(true);
-                    Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    // -------- helpers --------
+
+    private long parseDateToMidnightMillis(String yyyyMMdd) {
+        if (TextUtils.isEmpty(yyyyMMdd)) return -1L;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(yyyyMMdd));
+
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            return cal.getTimeInMillis();
+        } catch (Exception e) {
+            return -1L;
+        }
+    }
+
+    private boolean isSameDay(long millisA, long millisB) {
+        Calendar a = Calendar.getInstance();
+        a.setTimeInMillis(millisA);
+
+        Calendar b = Calendar.getInstance();
+        b.setTimeInMillis(millisB);
+
+        return a.get(Calendar.YEAR) == b.get(Calendar.YEAR)
+                && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR);
     }
 }

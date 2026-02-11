@@ -20,8 +20,12 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class EditDestinationActivity extends AppCompatActivity {
@@ -46,7 +50,20 @@ public class EditDestinationActivity extends AppCompatActivity {
 
     private boolean budgetEnabled = false;
 
+    // optional coords
+    private Double pickedLat = null;
+    private Double pickedLng = null;
+
     private ActivityResultLauncher<Intent> mapPickerLauncher;
+
+    // ✅ NEW: time rule bounds
+    private long baseDateMillis = -1L;      // midnight of trip date
+    private long minAllowedMillis = -1L;    // prevEnd + 1 min (or now if today)
+    private long maxAllowedMillis = -1L;    // nextStart - 1 min (optional)
+    private boolean rulesLoaded = false;
+
+    // duration per destination (for end_time_millis)
+    private static final int DEFAULT_DURATION_MINUTES = 60;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,9 +116,16 @@ public class EditDestinationActivity extends AppCompatActivity {
                 result -> {
                     if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                         String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
+
+                        double lat = result.getData().getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LAT, 0);
+                        double lng = result.getData().getDoubleExtra(MapPickerActivity.EXTRA_RESULT_LNG, 0);
+
                         if (!TextUtils.isEmpty(address)) {
                             etLocation.setText(address);
                         }
+
+                        pickedLat = lat;
+                        pickedLng = lng;
                     }
                 }
         );
@@ -142,6 +166,20 @@ public class EditDestinationActivity extends AppCompatActivity {
                         etBudget.setError(null);
                     }
 
+                    // ✅ load date + sequencing rules
+                    String dateStr = tripDoc.getString("scheduled_date");
+                    if (TextUtils.isEmpty(dateStr)) dateStr = tripDoc.getString("date");
+
+                    baseDateMillis = parseDateToMidnightMillis(dateStr);
+                    if (baseDateMillis <= 0) {
+                        Calendar cal = Calendar.getInstance();
+                        cal.set(Calendar.HOUR_OF_DAY, 0);
+                        cal.set(Calendar.MINUTE, 0);
+                        cal.set(Calendar.SECOND, 0);
+                        cal.set(Calendar.MILLISECOND, 0);
+                        baseDateMillis = cal.getTimeInMillis();
+                    }
+
                     // 2) now load destination details
                     loadDestination();
                 })
@@ -149,6 +187,14 @@ public class EditDestinationActivity extends AppCompatActivity {
                     // safe default
                     budgetEnabled = false;
                     layoutDestinationBudget.setVisibility(View.GONE);
+
+                    Calendar cal = Calendar.getInstance();
+                    cal.set(Calendar.HOUR_OF_DAY, 0);
+                    cal.set(Calendar.MINUTE, 0);
+                    cal.set(Calendar.SECOND, 0);
+                    cal.set(Calendar.MILLISECOND, 0);
+                    baseDateMillis = cal.getTimeInMillis();
+
                     loadDestination();
                 });
     }
@@ -180,31 +226,127 @@ public class EditDestinationActivity extends AppCompatActivity {
                     String location = doc.getString("location");
                     Double budget = doc.getDouble("budget");
                     String description = doc.getString("description");
-                    String time = doc.getString("time"); // ✅ new field
+                    String time = doc.getString("time");
+
+                    // coords
+                    pickedLat = doc.getDouble("lat");
+                    pickedLng = doc.getDouble("lng");
 
                     etName.setText(name != null ? name : "");
                     etLocation.setText(location != null ? location : "");
                     etDescription.setText(description != null ? description : "");
 
-                    // Spinner type selection (entries already in XML)
                     if (!TextUtils.isEmpty(type) && spType.getAdapter() != null) {
                         int pos = getSpinnerPosition(spType, type);
                         if (pos >= 0) spType.setSelection(pos);
                     }
 
-                    // Budget (only if enabled)
                     if (budgetEnabled && budget != null) {
                         etBudget.setText(String.valueOf(budget));
                     }
 
-                    // Time -> set spinners
                     if (!TextUtils.isEmpty(time)) {
                         setTimeSpinnersFromString(time);
                     }
+
+                    // ✅ after we have current destination loaded -> compute bounds
+                    computePrevNextBounds(uid);
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
                 );
+    }
+
+    // ✅ NEW: prev and next destination bounds based on millis
+    private void computePrevNextBounds(String uid) {
+        rulesLoaded = false;
+        minAllowedMillis = baseDateMillis; // earliest is day start by default
+        maxAllowedMillis = -1L;
+
+        // If trip date is today, earliest should not be past current time
+        long now = System.currentTimeMillis();
+        if (isSameDay(now, baseDateMillis) && minAllowedMillis < now) {
+            minAllowedMillis = now;
+        }
+
+        // 1) get current destination start_time_millis (or compute from spinner later)
+        db.collection("users")
+                .document(uid)
+                .collection("trips")
+                .document(tripId)
+                .collection("destinations")
+                .document(destinationId)
+                .get()
+                .addOnSuccessListener(currDoc -> {
+                    Long currentStart = currDoc.getLong("start_time_millis");
+                    if (currentStart == null || currentStart <= 0) {
+                        // if old docs, we still can compute bounds by time field, but not perfect.
+                        // We'll just rely on prev max end_time_millis and next min start_time_millis.
+                        currentStart = Long.MAX_VALUE;
+                    }
+
+                    final long currentStartFinal = currentStart;
+
+                    // PREV: latest end_time_millis less than currentStart
+                    db.collection("users")
+                            .document(uid)
+                            .collection("trips")
+                            .document(tripId)
+                            .collection("destinations")
+                            .orderBy("end_time_millis", Query.Direction.DESCENDING)
+                            .get()
+                            .addOnSuccessListener(qsPrev -> {
+                                long bestPrevEnd = -1L;
+
+                                for (var d : qsPrev.getDocuments()) {
+                                    if (d.getId().equals(destinationId)) continue;
+                                    Long end = d.getLong("end_time_millis");
+                                    if (end == null || end <= 0) continue;
+
+                                    if (end < currentStartFinal) {
+                                        bestPrevEnd = end;
+                                        break; // because DESC, first match is nearest prev
+                                    }
+                                }
+
+                                if (bestPrevEnd > 0) {
+                                    long candidateMin = bestPrevEnd + 60000; // +1 min
+                                    if (candidateMin > minAllowedMillis) minAllowedMillis = candidateMin;
+                                }
+
+                                // NEXT: earliest start_time_millis greater than currentStart
+                                db.collection("users")
+                                        .document(uid)
+                                        .collection("trips")
+                                        .document(tripId)
+                                        .collection("destinations")
+                                        .orderBy("start_time_millis", Query.Direction.ASCENDING)
+                                        .get()
+                                        .addOnSuccessListener(qsNext -> {
+                                            long bestNextStart = -1L;
+
+                                            for (var d : qsNext.getDocuments()) {
+                                                if (d.getId().equals(destinationId)) continue;
+                                                Long start = d.getLong("start_time_millis");
+                                                if (start == null || start <= 0) continue;
+
+                                                if (start > currentStartFinal) {
+                                                    bestNextStart = start;
+                                                    break; // ASC, first match is nearest next
+                                                }
+                                            }
+
+                                            if (bestNextStart > 0) {
+                                                maxAllowedMillis = bestNextStart - 60000; // -1 min
+                                            }
+
+                                            rulesLoaded = true;
+                                        })
+                                        .addOnFailureListener(e -> rulesLoaded = true);
+                            })
+                            .addOnFailureListener(e -> rulesLoaded = true);
+                })
+                .addOnFailureListener(e -> rulesLoaded = true);
     }
 
     private void saveEdits() {
@@ -219,17 +361,51 @@ public class EditDestinationActivity extends AppCompatActivity {
         String location = etLocation.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
 
-        // Required time
-        String hour = (spHour.getSelectedItem() != null) ? spHour.getSelectedItem().toString() : "";
-        String minute = (spMinute.getSelectedItem() != null) ? spMinute.getSelectedItem().toString() : "";
-        String ampm = (spAmPm.getSelectedItem() != null) ? spAmPm.getSelectedItem().toString() : "";
-
-        String time = hour + ":" + minute + " " + ampm;
+        String hourStr = (spHour.getSelectedItem() != null) ? spHour.getSelectedItem().toString() : "";
+        String minuteStr = (spMinute.getSelectedItem() != null) ? spMinute.getSelectedItem().toString() : "";
+        String ampmStr = (spAmPm.getSelectedItem() != null) ? spAmPm.getSelectedItem().toString() : "";
 
         if (TextUtils.isEmpty(name)) { etName.setError("Required"); return; }
         if (TextUtils.isEmpty(location)) { etLocation.setError("Required"); return; }
-        if (TextUtils.isEmpty(hour) || TextUtils.isEmpty(minute) || TextUtils.isEmpty(ampm)) {
+        if (TextUtils.isEmpty(hourStr) || TextUtils.isEmpty(minuteStr) || TextUtils.isEmpty(ampmStr)) {
             Toast.makeText(this, "Please select a valid time.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!rulesLoaded) {
+            Toast.makeText(this, "Loading time rules… try again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int hour12;
+        int minute;
+        try {
+            hour12 = Integer.parseInt(hourStr);
+            minute = Integer.parseInt(minuteStr);
+        } catch (Exception e) {
+            Toast.makeText(this, "Invalid time.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int hour24 = to24Hour(hour12, ampmStr);
+        long startMillis = toMillisOnTripDate(hour24, minute);
+        long endMillis = startMillis + (DEFAULT_DURATION_MINUTES * 60_000L);
+
+        // ✅ VALIDATION: after prev +1 min
+        if (minAllowedMillis > 0 && startMillis < minAllowedMillis) {
+            Toast.makeText(this, "Time must be after previous destination.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // ✅ VALIDATION: before next -1 min (if exists)
+        if (maxAllowedMillis > 0 && startMillis > maxAllowedMillis) {
+            Toast.makeText(this, "Time must be before next destination.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Also check end doesn't overlap next
+        if (maxAllowedMillis > 0 && endMillis > (maxAllowedMillis + 60000)) {
+            Toast.makeText(this, "This destination overlaps the next one.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -248,27 +424,34 @@ public class EditDestinationActivity extends AppCompatActivity {
                     return;
                 }
             } else {
-                // if enabled but left empty, you can decide:
-                // - require it (setError)
-                // - or allow null
-                // I’ll allow null here.
                 budget = null;
             }
         }
 
         btnSave.setEnabled(false);
 
+        String timeStr = String.format(Locale.getDefault(), "%d:%02d %s", hour12, minute, ampmStr.toUpperCase());
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("destination_name", name);
         updates.put("type", type);
         updates.put("location", location);
         updates.put("description", description);
-        updates.put("time", time); // ✅ save as one field
+        updates.put("time", timeStr);
+
+        // ✅ NEW: millis fields
+        updates.put("start_time_millis", startMillis);
+        updates.put("end_time_millis", endMillis);
+
+        // optional coords
+        if (pickedLat != null && pickedLng != null) {
+            updates.put("lat", pickedLat);
+            updates.put("lng", pickedLng);
+        }
 
         if (budgetEnabled) {
-            updates.put("budget", budget); // can be null
+            updates.put("budget", budget);
         } else {
-            // if trip doesn't use budget, remove budget value
             updates.put("budget", null);
         }
 
@@ -300,21 +483,20 @@ public class EditDestinationActivity extends AppCompatActivity {
         return -1;
     }
 
-    // Expects format like "9:05 PM" or "12:30 AM"
     private void setTimeSpinnersFromString(String time) {
         try {
             String t = time.trim(); // "9:05 PM"
             String[] parts = t.split(" ");
             if (parts.length < 2) return;
 
-            String hm = parts[0]; // "9:05"
-            String ampm = parts[1].toUpperCase(); // "PM"
+            String hm = parts[0];
+            String ampm = parts[1].toUpperCase();
 
             String[] hmParts = hm.split(":");
             if (hmParts.length < 2) return;
 
-            String hour = hmParts[0]; // "9"
-            String minute = hmParts[1]; // "05"
+            String hour = hmParts[0];
+            String minute = hmParts[1];
 
             int hourPos = getSpinnerPosition(spHour, hour);
             int minPos = getSpinnerPosition(spMinute, minute);
@@ -325,5 +507,51 @@ public class EditDestinationActivity extends AppCompatActivity {
             if (ampmPos >= 0) spAmPm.setSelection(ampmPos);
 
         } catch (Exception ignored) {}
+    }
+
+    private int to24Hour(int hour12, String ampm) {
+        String ap = (ampm != null) ? ampm.toUpperCase() : "AM";
+        int h = hour12 % 12;
+        if ("PM".equals(ap)) h += 12;
+        return h;
+    }
+
+    private long toMillisOnTripDate(int hour24, int minute) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(baseDateMillis > 0 ? baseDateMillis : System.currentTimeMillis());
+        cal.set(Calendar.HOUR_OF_DAY, hour24);
+        cal.set(Calendar.MINUTE, minute);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
+    }
+
+    private long parseDateToMidnightMillis(String yyyyMMdd) {
+        if (TextUtils.isEmpty(yyyyMMdd)) return -1L;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(sdf.parse(yyyyMMdd));
+
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            return cal.getTimeInMillis();
+        } catch (Exception e) {
+            return -1L;
+        }
+    }
+
+    private boolean isSameDay(long millisA, long millisB) {
+        Calendar a = Calendar.getInstance();
+        a.setTimeInMillis(millisA);
+
+        Calendar b = Calendar.getInstance();
+        b.setTimeInMillis(millisB);
+
+        return a.get(Calendar.YEAR) == b.get(Calendar.YEAR)
+                && a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR);
     }
 }
