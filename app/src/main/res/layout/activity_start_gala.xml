@@ -7,27 +7,51 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvTripTitle"
+    <!-- ✅ HEADER: Trip Title + Directions (top right) + Progress -->
+    <LinearLayout
+        android:id="@+id/headerRow"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Trip Name"
-        android:textStyle="bold"
-        android:textSize="20sp"
+        android:orientation="vertical"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <TextView
-        android:id="@+id/tvProgress"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Destination 1 of 5"
-        android:textSize="13sp"
-        android:layout_marginTop="6dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTripTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvTripTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Trip Name"
+                android:textStyle="bold"
+                android:textSize="20sp"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <Button
+                android:id="@+id/btnDirections"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Directions"
+                android:minWidth="0dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Destination 1 of 5"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cardCurrentDestination"
@@ -36,8 +60,8 @@
         android:layout_marginTop="12dp"
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
-        app:layout_constraintTop_toBottomOf="@id/tvProgress"
-        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintTop_toBottomOf="@id/headerRow"
+        app:layout_constraintBottom_toTopOf="@id/bottomBarScroll"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -58,7 +82,7 @@
                     android:text="Current Destination"
                     android:textStyle="bold"
                     android:textSize="16sp"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginBottom="12dp" />
 
                 <TextView
                     android:id="@+id/tvDestName"
@@ -66,51 +90,55 @@
                     android:layout_height="wrap_content"
                     android:text="Destination Name"
                     android:textStyle="bold"
-                    android:textSize="18sp"/>
+                    android:textSize="18sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:id="@+id/tvDestType"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Type: Tourist Spot"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp" />
 
                 <TextView
                     android:id="@+id/tvDestLocation"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Location: Boracay, Aklan"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp"
+                    android:maxLines="3"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:id="@+id/tvDestDateTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Time: 9:00 AM"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp" />
 
                 <TextView
                     android:id="@+id/tvDestBudget"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Budget: ₱1500"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Description"
                     android:textStyle="bold"
-                    android:layout_marginTop="12dp"/>
+                    android:layout_marginTop="12dp" />
 
                 <TextView
                     android:id="@+id/tvDestDescription"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="(Description here...)"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp" />
 
-                <!-- ✅ WRAPPER: hide/show all extras in one go -->
+                <!-- ✅ WRAPPER: hide/show extras -->
                 <LinearLayout
                     android:id="@+id/layoutExtras"
                     android:layout_width="match_parent"
@@ -118,7 +146,6 @@
                     android:orientation="vertical"
                     android:layout_marginTop="12dp">
 
-                    <!-- Photo -->
                     <ImageView
                         android:id="@+id/imgDestPhoto"
                         android:layout_width="match_parent"
@@ -126,23 +153,22 @@
                         android:layout_marginTop="6dp"
                         android:scaleType="centerCrop"
                         android:visibility="gone"
-                        android:contentDescription="Destination photo"/>
+                        android:contentDescription="Destination photo" />
 
                     <Button
                         android:id="@+id/btnAddPhoto"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Add Photo"
-                        android:layout_marginTop="10dp"/>
+                        android:layout_marginTop="10dp" />
 
-                    <!-- Spent -->
                     <TextView
                         android:id="@+id/tvSpentSummary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Spent: ₱0.00"
                         android:layout_marginTop="14dp"
-                        android:textStyle="bold"/>
+                        android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -157,14 +183,14 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:hint="Enter amount spent"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="numberDecimal" />
 
                         <Button
                             android:id="@+id/btnAddSpent"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Add"
-                            android:layout_marginStart="8dp"/>
+                            android:layout_marginStart="8dp" />
                     </LinearLayout>
 
                 </LinearLayout>
@@ -173,52 +199,50 @@
         </ScrollView>
     </androidx.cardview.widget.CardView>
 
-    <LinearLayout
-        android:id="@+id/bottomBar"
+    <!-- ✅ Responsive bottom bar: scrolls horizontally on small screens -->
+    <HorizontalScrollView
+        android:id="@+id/bottomBarScroll"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
-            android:id="@+id/btnBack"
+        <LinearLayout
+            android:id="@+id/bottomBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Back" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp">
 
-        <Button
-            android:id="@+id/btnDirections"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Directions"
-            android:layout_marginStart="8dp" />
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="Back" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+            <Button
+                android:id="@+id/btnEndTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="End Trip"
+                android:layout_marginStart="8dp" />
 
-        <Button
-            android:id="@+id/btnEndTrip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="End Trip" />
+            <Button
+                android:id="@+id/btnDoneNext"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="Done / Next"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@+id/btnDoneNext"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Done / Next" />
-    </LinearLayout>
+    </HorizontalScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

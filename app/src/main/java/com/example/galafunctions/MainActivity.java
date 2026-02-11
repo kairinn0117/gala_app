@@ -30,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
     private ListenerRegistration ongoingListener;
     private String ongoingTripId = null;
 
+    private BottomNavigationView bnv1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,41 +58,36 @@ public class MainActivity extends AppCompatActivity {
             startActivity(i);
         });
 
-        BottomNavigationView bnv1 = findViewById(R.id.bnv1);
+        bnv1 = findViewById(R.id.bnv1);
 
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragmentContainerView2, new Home())
-                    .commit();
-        }
-
-        // ✅ tip: no addToBackStack for bottom nav
         bnv1.setOnItemSelectedListener(item -> {
-            FragmentManager fragmentManager = getSupportFragmentManager();
+            FragmentManager fm = getSupportFragmentManager();
 
             if (item.getItemId() == R.id.home) {
-                fragmentManager.beginTransaction()
+                fm.beginTransaction()
                         .replace(R.id.fragmentContainerView2, Home.class, null)
                         .setReorderingAllowed(true)
                         .commit();
                 return true;
 
             } else if (item.getItemId() == R.id.map) {
-                fragmentManager.beginTransaction()
+                fm.beginTransaction()
                         .replace(R.id.fragmentContainerView2, Maps.class, null)
                         .setReorderingAllowed(true)
                         .commit();
                 return true;
 
             } else if (item.getItemId() == R.id.gallery) {
-                fragmentManager.beginTransaction()
+                fm.beginTransaction()
                         .replace(R.id.fragmentContainerView2, Gallery.class, null)
                         .setReorderingAllowed(true)
                         .commit();
                 return true;
 
             } else if (item.getItemId() == R.id.settings) {
-                fragmentManager.beginTransaction()
+                // ✅ slide up animation pag Settings
+                fm.beginTransaction()
+                        .setCustomAnimations(R.anim.slide_up, R.anim.slide_down)
                         .replace(R.id.fragmentContainerView2, Settings.class, null)
                         .setReorderingAllowed(true)
                         .commit();
@@ -98,6 +95,49 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         });
+
+        // ✅ Default fragment
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentContainerView2, new Home())
+                    .commit();
+        }
+
+        // ✅ Handle deep nav request (ex: StartGala -> goHome())
+        handleOpenFragmentIntent(getIntent());
+    }
+
+    // ✅ Very important: kapag MainActivity already open then tinawag ulit via Intent,
+    // dito papasok para ma-handle "open_fragment"
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleOpenFragmentIntent(intent);
+    }
+
+    private void handleOpenFragmentIntent(Intent intent) {
+        if (intent == null) return;
+
+        String open = intent.getStringExtra("open_fragment");
+        if ("home".equalsIgnoreCase(open)) {
+            openHomeFragment();
+            // ✅ optional: para di ma-repeat pag bumalik sa activity
+            intent.removeExtra("open_fragment");
+        }
+    }
+
+    private void openHomeFragment() {
+        if (bnv1 != null) {
+            // ✅ This will trigger your OnItemSelectedListener and swap fragment correctly
+            bnv1.setSelectedItemId(R.id.home);
+        } else {
+            // fallback
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentContainerView2, Home.class, null)
+                    .setReorderingAllowed(true)
+                    .commit();
+        }
     }
 
     @Override
@@ -122,7 +162,6 @@ public class MainActivity extends AppCompatActivity {
 
         String uid = auth.getCurrentUser().getUid();
 
-        // ✅ no orderBy to avoid index issue
         ongoingListener = db.collection("users")
                 .document(uid)
                 .collection("trips")

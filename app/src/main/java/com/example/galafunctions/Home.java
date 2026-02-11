@@ -15,16 +15,21 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Home extends Fragment {
 
@@ -73,6 +78,9 @@ public class Home extends Fragment {
         adapter = new TripAdapter(requireContext(), displayList);
         rvTrips.setAdapter(adapter);
 
+        // ✅ SWIPE TO ARCHIVE
+        attachSwipeToArchive();
+
         fabAddGala.setOnClickListener(v ->
                 startActivity(new Intent(getActivity(), CreateTrip.class))
         );
@@ -89,7 +97,6 @@ public class Home extends Fragment {
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void afterTextChanged(Editable s) {}
-
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchQuery = (s != null) ? s.toString().trim().toLowerCase() : "";
@@ -121,6 +128,7 @@ public class Home extends Fragment {
         plannedListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
+                // NOTE: You can change this to show also SCHEDULED / IN_PROGRESS if you want
                 .whereEqualTo("status", "PLANNED")
                 .whereEqualTo("is_archived", false)
                 .addSnapshotListener((snap, e) -> {
@@ -149,9 +157,7 @@ public class Home extends Fragment {
 
         for (Trip t : rawList) {
             if (t == null) continue;
-            if (matchesSearch(t)) {
-                displayList.add(t);
-            }
+            if (matchesSearch(t)) displayList.add(t);
         }
 
         adapter.notifyDataSetChanged();
@@ -173,5 +179,82 @@ public class Home extends Fragment {
             plannedListener.remove();
             plannedListener = null;
         }
+    }
+
+    // -------------------------
+    // ✅ Swipe to Archive
+    // -------------------------
+
+    private void attachSwipeToArchive() {
+        ItemTouchHelper.SimpleCallback cb = new ItemTouchHelper.SimpleCallback(
+                0,
+                ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT
+        ) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder,
+                                  @NonNull RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                int pos = viewHolder.getAdapterPosition();
+                if (pos < 0 || pos >= displayList.size()) {
+                    adapter.notifyDataSetChanged();
+                    return;
+                }
+
+                Trip trip = displayList.get(pos);
+                showArchiveConfirm(trip, pos);
+            }
+        };
+
+        new ItemTouchHelper(cb).attachToRecyclerView(rvTrips);
+    }
+
+    private void showArchiveConfirm(Trip trip, int swipedPosition) {
+        if (trip == null || TextUtils.isEmpty(trip.tripId)) {
+            adapter.notifyItemChanged(swipedPosition);
+            return;
+        }
+
+        String name = !TextUtils.isEmpty(trip.trip_name) ? trip.trip_name : "this gala";
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Archive Gala?")
+                .setMessage("Are you sure you want to archive \"" + name + "\"?\n\nYou can restore it later in Archive.")
+                .setNegativeButton("Cancel", (d, w) -> {
+                    // reset swipe
+                    adapter.notifyItemChanged(swipedPosition);
+                })
+                .setPositiveButton("Archive", (d, w) -> archiveTrip(trip.tripId))
+                .show();
+    }
+
+    private void archiveTrip(String tripId) {
+        if (auth.getCurrentUser() == null) return;
+        String uid = auth.getCurrentUser().getUid();
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("is_archived", true);
+        updates.put("archived_at", Timestamp.now());
+        updates.put("status", "ARCHIVED"); // optional, helpful label
+
+        db.collection("users")
+                .document(uid)
+                .collection("trips")
+                .document(tripId)
+                .update(updates)
+                .addOnSuccessListener(unused -> {
+                    Toast.makeText(getContext(), "Archived!", Toast.LENGTH_SHORT).show();
+                    // optional: open ArchiveActivity after archive
+                    if (getActivity() != null) {
+                        startActivity(new Intent(getActivity(), ArchiveActivity.class));
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(getContext(), "Archive failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                );
     }
 }

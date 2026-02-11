@@ -1,13 +1,21 @@
 package com.example.galafunctions;
 
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.DialogInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.*;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.Switch;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,6 +28,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -29,7 +38,10 @@ public class CreateTrip extends AppCompatActivity {
     private ImageButton btnCreate, btnCancel;
 
     private EditText etTripName, etLocation, etBudget, etDescription;
+
     private Spinner spCategory;
+    private EditText etCustomCategory;
+
     private Switch swBudget;
     private LinearLayout layoutBudget;
 
@@ -41,7 +53,13 @@ public class CreateTrip extends AppCompatActivity {
 
     private ActivityResultLauncher<String> imagePicker;
     private ActivityResultLauncher<Intent> mapPickerLauncher;
+
     private ImageButton btnTripSearchMap;
+
+    // states
+    private boolean isSaving = false;
+
+    private static final String CATEGORY_OTHERS = "Others"; // adjust if your spinner uses "Other"
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,13 +86,25 @@ public class CreateTrip extends AppCompatActivity {
         layoutBudget = findViewById(R.id.layoutBudgetSection);
 
         btnTripSearchMap = findViewById(R.id.btnTripSearchMap);
+        etCustomCategory = findViewById(R.id.etCustomCategory);
 
-        // ✅ Image picker (Glide preview = no ANR)
+        // ✅ Make location NOT typeable (map only)
+        lockLocationField();
+
+        // ✅ Back press (gesture + button) confirm
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (isSaving) return;
+                showCancelConfirm();
+            }
+        });
+
+        // ✅ Image picker (Glide preview)
         imagePicker = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     selectedImageUri = uri;
-
                     if (uri != null) {
                         Glide.with(CreateTrip.this)
                                 .load(uri)
@@ -86,12 +116,43 @@ public class CreateTrip extends AppCompatActivity {
                 }
         );
 
-        imgCover.setOnClickListener(v -> imagePicker.launch("image/*"));
+        imgCover.setOnClickListener(v -> {
+            if (isSaving) return;
+            imagePicker.launch("image/*");
+        });
 
         // Budget toggle
         swBudget.setOnCheckedChangeListener((b, checked) ->
                 layoutBudget.setVisibility(checked ? View.VISIBLE : View.GONE)
         );
+
+        // ✅ Category "Others" -> show custom input
+        if (etCustomCategory != null) {
+            etCustomCategory.setVisibility(View.GONE);
+        }
+        spCategory.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String selected = (spCategory.getSelectedItem() != null)
+                        ? spCategory.getSelectedItem().toString().trim()
+                        : "";
+
+                boolean isOthers = selected.equalsIgnoreCase(CATEGORY_OTHERS)
+                        || selected.equalsIgnoreCase("Other")
+                        || selected.equalsIgnoreCase("Others");
+
+                if (etCustomCategory != null) {
+                    etCustomCategory.setVisibility(isOthers ? View.VISIBLE : View.GONE);
+                    if (!isOthers) {
+                        etCustomCategory.setText("");
+                        etCustomCategory.setError(null);
+                    }
+                }
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
 
         // ✅ Map picker
         mapPickerLauncher = registerForActivityResult(
@@ -101,63 +162,219 @@ public class CreateTrip extends AppCompatActivity {
                         String address = result.getData().getStringExtra(MapPickerActivity.EXTRA_RESULT_ADDRESS);
                         if (!TextUtils.isEmpty(address)) {
                             etLocation.setText(address);
+                            etLocation.setError(null);
                         }
                     }
                 }
         );
 
-        btnTripSearchMap.setOnClickListener(v -> {
+        View.OnClickListener openMap = v -> {
+            if (isSaving) return;
             Intent intent = new Intent(CreateTrip.this, MapPickerActivity.class);
             mapPickerLauncher.launch(intent);
+        };
+
+        btnTripSearchMap.setOnClickListener(openMap);
+
+        // optional: tap on location field also opens map
+        etLocation.setOnClickListener(openMap);
+
+        // Cancel confirm
+        btnCancel.setOnClickListener(v -> {
+            if (isSaving) return;
+            showCancelConfirm();
         });
 
-        btnCancel.setOnClickListener(v -> finish());
-        btnCreate.setOnClickListener(v -> createTrip());
+        // Create confirm (with validation first)
+        btnCreate.setOnClickListener(v -> {
+            if (isSaving) return;
+            if (!validateInputs()) return;
+            showCreateConfirm();
+        });
     }
 
-    private void createTrip() {
-        if (auth.getCurrentUser() == null) return;
+    private void lockLocationField() {
 
-        String uid = auth.getCurrentUser().getUid();
+        etLocation.setFocusable(false);
+        etLocation.setFocusableInTouchMode(false);
+        etLocation.setClickable(true);
+        etLocation.setCursorVisible(false);
+        etLocation.setLongClickable(false);
+        etLocation.setTextIsSelectable(false);
+        etLocation.setInputType(android.text.InputType.TYPE_NULL);
 
-        String name = etTripName.getText().toString().trim();
-        String location = etLocation.getText().toString().trim();
-        String category = (spCategory.getSelectedItem() != null) ? spCategory.getSelectedItem().toString() : "";
+        // Only apply for Android O and above
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            etLocation.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
+        }
+    }
+
+    private boolean validateInputs() {
+        String name = safeText(etTripName);
+        String location = safeText(etLocation);
+
+        String selectedCategory = (spCategory.getSelectedItem() != null)
+                ? spCategory.getSelectedItem().toString().trim()
+                : "";
+
         boolean budgetEnabled = swBudget.isChecked();
 
-        if (TextUtils.isEmpty(name)) { etTripName.setError("Required"); return; }
-        if (TextUtils.isEmpty(location)) { etLocation.setError("Required"); return; }
+        etTripName.setError(null);
+        etLocation.setError(null);
+        if (etCustomCategory != null) etCustomCategory.setError(null);
+        if (etBudget != null) etBudget.setError(null);
 
-        Double budget = null;
-        if (budgetEnabled) {
-            String budgetStr = etBudget.getText().toString().trim();
-            if (TextUtils.isEmpty(budgetStr)) { etBudget.setError("Required"); return; }
-            try {
-                budget = Double.parseDouble(budgetStr);
-            } catch (Exception e) {
-                etBudget.setError("Invalid number");
-                return;
+        if (TextUtils.isEmpty(name)) {
+            etTripName.setError("Required");
+            return false;
+        }
+
+        if (TextUtils.isEmpty(location)) {
+            etLocation.setError("Pick location using map");
+            return false;
+        }
+
+        // Others category -> custom required
+        boolean isOthers = selectedCategory.equalsIgnoreCase(CATEGORY_OTHERS)
+                || selectedCategory.equalsIgnoreCase("Other")
+                || selectedCategory.equalsIgnoreCase("Others");
+
+        if (isOthers) {
+            String custom = (etCustomCategory != null) ? safeText(etCustomCategory) : "";
+            if (TextUtils.isEmpty(custom)) {
+                if (etCustomCategory != null) etCustomCategory.setError("Please specify");
+                return false;
             }
         }
 
-        btnCreate.setEnabled(false);
+        if (budgetEnabled) {
+            String budgetStr = safeText(etBudget);
+            if (TextUtils.isEmpty(budgetStr)) {
+                etBudget.setError("Required");
+                return false;
+            }
+            try {
+                double b = Double.parseDouble(budgetStr);
+                if (b < 0) {
+                    etBudget.setError("Must be 0 or more");
+                    return false;
+                }
+            } catch (Exception e) {
+                etBudget.setError("Invalid number");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void showCreateConfirm() {
+        new AlertDialog.Builder(this)
+                .setTitle("Create trip?")
+                .setMessage("Are you sure you want to create this trip?")
+                .setNegativeButton("No", (d, w) -> d.dismiss())
+                .setPositiveButton("Yes", (d, w) -> {
+                    d.dismiss();
+                    createTrip();
+                })
+                .show();
+    }
+
+    private void showCancelConfirm() {
+        new AlertDialog.Builder(this)
+                .setTitle("Discard changes?")
+                .setMessage("Are you sure you want to cancel? Your inputs will be lost.")
+                .setNegativeButton("No", (d, w) -> d.dismiss())
+                .setPositiveButton("Yes", (d, w) -> {
+                    d.dismiss();
+                    finish();
+                })
+                .show();
+    }
+
+    private void setUiEnabled(boolean enabled) {
+        btnCreate.setEnabled(enabled);
+        btnCancel.setEnabled(enabled);
+        imgCover.setEnabled(enabled);
+        btnTripSearchMap.setEnabled(enabled);
+
+        etTripName.setEnabled(enabled);
+        etDescription.setEnabled(enabled);
+
+        // keep location non-typeable but clickable when enabled
+        etLocation.setEnabled(enabled);
+        etLocation.setClickable(enabled);
+
+        spCategory.setEnabled(enabled);
+        swBudget.setEnabled(enabled);
+
+        if (etCustomCategory != null) etCustomCategory.setEnabled(enabled);
+        if (etBudget != null) etBudget.setEnabled(enabled);
+    }
+
+    private void createTrip() {
+        if (auth.getCurrentUser() == null) {
+            Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String uid = auth.getCurrentUser().getUid();
+
+        String name = safeText(etTripName);
+        String location = safeText(etLocation);
+
+        String selectedCategory = (spCategory.getSelectedItem() != null)
+                ? spCategory.getSelectedItem().toString().trim()
+                : "";
+
+        boolean budgetEnabled = swBudget.isChecked();
+
+        // category final
+        boolean isOthers = selectedCategory.equalsIgnoreCase(CATEGORY_OTHERS)
+                || selectedCategory.equalsIgnoreCase("Other")
+                || selectedCategory.equalsIgnoreCase("Others");
+
+        String categoryFinal = selectedCategory;
+        if (isOthers && etCustomCategory != null) {
+            String custom = safeText(etCustomCategory);
+            if (!TextUtils.isEmpty(custom)) categoryFinal = custom;
+        }
+
+        Double budget = null;
+        if (budgetEnabled) {
+            String budgetStr = safeText(etBudget);
+            if (!TextUtils.isEmpty(budgetStr)) {
+                try {
+                    budget = Double.parseDouble(budgetStr);
+                } catch (Exception ignored) {
+                    // validateInputs already handles this
+                    budget = null;
+                }
+            }
+        }
+
+        isSaving = true;
+        setUiEnabled(false);
 
         String tripId = db.collection("tmp").document().getId();
 
         Map<String, Object> trip = new HashMap<>();
         trip.put("trip_name", name);
-        trip.put("trip_category", category);
+        trip.put("trip_category", categoryFinal);
         trip.put("location", location);
 
         trip.put("budget_enabled", budgetEnabled);
         trip.put("trip_budget", budget);
-        trip.put("description", etDescription.getText().toString());
+        trip.put("description", safeText(etDescription));
 
         trip.put("status", "PLANNED");
         trip.put("is_archived", false);
         trip.put("created_at", Timestamp.now());
+
+        // defaults
         trip.put("scheduled_date", "");
         trip.put("scheduled_time", "");
+        trip.put("scheduled_sort_millis", 0L);
 
         if (selectedImageUri == null) {
             saveTrip(uid, tripId, trip);
@@ -175,7 +392,8 @@ public class CreateTrip extends AppCompatActivity {
                     saveTrip(uid, tripId, trip);
                 })
                 .addOnFailureListener(e -> {
-                    btnCreate.setEnabled(true);
+                    isSaving = false;
+                    setUiEnabled(true);
                     Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
@@ -193,8 +411,14 @@ public class CreateTrip extends AppCompatActivity {
                     finish();
                 })
                 .addOnFailureListener(e -> {
-                    btnCreate.setEnabled(true);
+                    isSaving = false;
+                    setUiEnabled(true);
                     Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private String safeText(EditText et) {
+        if (et == null || et.getText() == null) return "";
+        return et.getText().toString().trim();
     }
 }

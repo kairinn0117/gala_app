@@ -10,6 +10,8 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -38,6 +40,10 @@ public class PlanTripActivity extends AppCompatActivity {
 
     private int pickedYear, pickedMonth, pickedDay;
     private boolean hasDate = false;
+
+    // ✅ for discard detection
+    private String originalDate = "";
+    private boolean isSaving = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,9 +74,24 @@ public class PlanTripActivity extends AppCompatActivity {
         btnCancel = findViewById(R.id.btnCancel);
         btnSave = findViewById(R.id.btnSaveSchedule);
 
+        // ✅ keep initial state (if may laman from xml or prefill someday)
+        originalDate = safeText(etPlanDate);
+
         etPlanDate.setOnClickListener(v -> showDatePicker());
-        btnCancel.setOnClickListener(v -> finish());
-        btnSave.setOnClickListener(v -> saveSchedule());
+
+        // ✅ Cancel now confirms if there are changes
+        btnCancel.setOnClickListener(v -> confirmDiscardIfNeeded());
+
+        // ✅ Save now confirms
+        btnSave.setOnClickListener(v -> confirmSaveSchedule());
+
+        // ✅ Back gesture confirm discard if may changes
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                confirmDiscardIfNeeded();
+            }
+        });
     }
 
     private void showDatePicker() {
@@ -97,17 +118,80 @@ public class PlanTripActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    // -------------------------
+    // ✅ CONFIRMATIONS
+    // -------------------------
+
+    private void confirmSaveSchedule() {
+        if (auth.getCurrentUser() == null) {
+            Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!hasDate || TextUtils.isEmpty(safeText(etPlanDate))) {
+            etPlanDate.setError("Required");
+            return;
+        }
+
+        String dateStr = safeText(etPlanDate);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Save Schedule?")
+                .setMessage("Are you sure you want to set this trip date to:\n\n" + dateStr)
+                .setNegativeButton("Cancel", (d, w) -> {})
+                .setPositiveButton("Yes", (d, w) -> saveSchedule())
+                .show();
+    }
+
+    private void confirmDiscardIfNeeded() {
+        if (isSaving) return;
+
+        if (!hasChanges()) {
+            finish();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Discard changes?")
+                .setMessage("You have unsaved changes. Are you sure you want to discard them?")
+                .setNegativeButton("No", (d, w) -> {})
+                .setPositiveButton("Yes", (d, w) -> finish())
+                .show();
+    }
+
+    private boolean hasChanges() {
+        String current = safeText(etPlanDate);
+        // if original empty then consider change if user picked a date
+        if (TextUtils.isEmpty(originalDate)) {
+            return hasDate && !TextUtils.isEmpty(current);
+        }
+        return !TextUtils.equals(originalDate, current);
+    }
+
+    private String safeText(EditText et) {
+        return et.getText() == null ? "" : et.getText().toString().trim();
+    }
+
+    // -------------------------
+    // ✅ SAVE (same logic mo)
+    // -------------------------
+
     private void saveSchedule() {
         if (auth.getCurrentUser() == null) {
             Toast.makeText(this, "Please login first.", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (!hasDate) { etPlanDate.setError("Required"); return; }
+        if (!hasDate) {
+            etPlanDate.setError("Required");
+            return;
+        }
 
+        isSaving = true;
         btnSave.setEnabled(false);
+        btnCancel.setEnabled(false);
+        etPlanDate.setEnabled(false);
 
         String uid = auth.getCurrentUser().getUid();
-        String dateStr = etPlanDate.getText().toString().trim();
+        String dateStr = safeText(etPlanDate);
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "SCHEDULED");
@@ -131,7 +215,11 @@ public class PlanTripActivity extends AppCompatActivity {
                     finish();
                 })
                 .addOnFailureListener(e -> {
+                    isSaving = false;
                     btnSave.setEnabled(true);
+                    btnCancel.setEnabled(true);
+                    etPlanDate.setEnabled(true);
+
                     Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }

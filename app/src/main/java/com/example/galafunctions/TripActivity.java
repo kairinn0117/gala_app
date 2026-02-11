@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -124,23 +125,33 @@ public class TripActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // ✅ Plan / Reschedule (DATE ONLY)
+        // ✅ PLAN / RESCHEDULE with validation
         btnPlanTrip.setOnClickListener(v -> {
+            if (!hasAtLeastOneDestination()) {
+                showNeedDestinationDialog("Plan Trip");
+                return;
+            }
+
             Intent i = new Intent(TripActivity.this, PlanTripActivity.class);
             i.putExtra(PlanTripActivity.EXTRA_TRIP_ID, tripId);
             startActivity(i);
         });
 
-        // ✅ Start / Activate / Start Now
+        // ✅ START / ACTIVATE / START NOW with validation
         btnStartTrip.setOnClickListener(v -> {
+            // template can be activated even without destinations? up to you.
+            // If you ALSO want to require destinations before activating, move the check above confirmActivateTrip.
             if (isTemplate) {
-                activateTrip();
+                confirmActivateTrip();
                 return;
             }
 
-            Intent intent = new Intent(TripActivity.this, StartGala.class);
-            intent.putExtra("tripId", tripId);
-            startActivity(intent);
+            if (!hasAtLeastOneDestination()) {
+                showNeedDestinationDialog("Start Gala");
+                return;
+            }
+
+            confirmStartGala();
         });
 
         if (btnEnableBudget != null) {
@@ -156,6 +167,7 @@ public class TripActivity extends AppCompatActivity {
         });
 
         loadTripDetails();
+        updateActionButtons(); // ✅ initial UI state
     }
 
     @Override
@@ -169,6 +181,46 @@ public class TripActivity extends AppCompatActivity {
         super.onStop();
         detachDestinationsListener();
     }
+
+    // -------------------------
+    // ✅ VALIDATION HELPERS
+    // -------------------------
+
+    private boolean hasAtLeastOneDestination() {
+        return destinationList != null && !destinationList.isEmpty();
+    }
+
+    private void showNeedDestinationDialog(String actionName) {
+        new AlertDialog.Builder(this)
+                .setTitle("Add Destination First")
+                .setMessage("You need to add at least 1 destination before you can " + actionName + ".")
+                .setNegativeButton("Cancel", (d, w) -> {})
+                .setPositiveButton("Add Destination", (d, w) -> {
+                    Intent intent = new Intent(TripActivity.this, CreateDestination.class);
+                    intent.putExtra("tripId", tripId);
+                    startActivity(intent);
+                })
+                .show();
+    }
+
+    private void updateActionButtons() {
+        boolean hasDest = hasAtLeastOneDestination();
+
+        // template logic: activate can still be allowed even if no dest
+        if (isTemplate) {
+            if (btnPlanTrip != null) btnPlanTrip.setEnabled(false);
+            if (btnStartTrip != null) btnStartTrip.setEnabled(true); // Activate always allowed
+            return;
+        }
+
+        // for normal trip, both need at least 1 destination
+        if (btnPlanTrip != null) btnPlanTrip.setEnabled(hasDest);
+        if (btnStartTrip != null) btnStartTrip.setEnabled(hasDest);
+    }
+
+    // -------------------------
+    // LOAD TRIP DETAILS
+    // -------------------------
 
     private void loadTripDetails() {
         if (auth.getCurrentUser() == null) {
@@ -202,8 +254,8 @@ public class TripActivity extends AppCompatActivity {
 
                     // scheduled fields (DATE ONLY + earliest destination time)
                     String scheduledDate = doc.getString("scheduled_date");
-                    String firstTime = doc.getString("first_destination_time"); // ✅ main display time
-                    String fallbackScheduledTime = doc.getString("scheduled_time"); // compat (optional)
+                    String firstTime = doc.getString("first_destination_time");
+                    String fallbackScheduledTime = doc.getString("scheduled_time");
 
                     String status = doc.getString("status");
                     tripStatus = !TextUtils.isEmpty(status) ? status.toUpperCase() : "PLANNED";
@@ -219,9 +271,6 @@ public class TripActivity extends AppCompatActivity {
                     tvTripLocation.setText(location != null ? location : "");
                     tvTripCategory.setText(category != null ? category : "OTHER");
 
-                    // ✅ Header datetime logic:
-                    // If SCHEDULED -> scheduled_date • earliest destination time
-                    // Else -> old planned date/time
                     String dt = "";
                     if ("SCHEDULED".equals(tripStatus)) {
                         if (!TextUtils.isEmpty(scheduledDate)) dt += scheduledDate;
@@ -239,7 +288,6 @@ public class TripActivity extends AppCompatActivity {
                     }
                     tvTripDateTime.setText(dt.isEmpty() ? "—" : dt);
 
-                    // ✅ Buttons logic
                     tvTemplateBadge.setVisibility(isTemplate ? View.VISIBLE : View.GONE);
 
                     if (isTemplate) {
@@ -256,7 +304,6 @@ public class TripActivity extends AppCompatActivity {
                         }
                     }
 
-                    // Budget UI
                     if (budgetEnabled) {
                         tvTripBudget.setVisibility(View.VISIBLE);
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.GONE);
@@ -270,7 +317,6 @@ public class TripActivity extends AppCompatActivity {
                         if (btnEnableBudget != null) btnEnableBudget.setVisibility(View.VISIBLE);
                     }
 
-                    // Recreate adapter with updated budget flag
                     destinationAdapter = new DestinationAdapter(
                             destinationList,
                             budgetEnabled,
@@ -290,6 +336,9 @@ public class TripActivity extends AppCompatActivity {
                     if (!TextUtils.isEmpty(coverUrl)) loadImageFromUrl(coverUrl);
 
                     attachDestinationsListener();
+
+                    // ✅ update buttons after trip info load
+                    updateActionButtons();
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
@@ -302,7 +351,6 @@ public class TripActivity extends AppCompatActivity {
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
-        // ✅ order by start_time_millis so first destination is always on top
         destinationsListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
@@ -327,9 +375,14 @@ public class TripActivity extends AppCompatActivity {
 
                     destinationAdapter.notifyDataSetChanged();
 
+                    boolean empty = destinationList.isEmpty();
+
                     if (tvEmptyDestinations != null) {
-                        tvEmptyDestinations.setVisibility(destinationList.isEmpty() ? View.VISIBLE : View.GONE);
+                        tvEmptyDestinations.setVisibility(empty ? View.VISIBLE : View.GONE);
                     }
+
+                    // ✅ LIVE update buttons based on destination count
+                    updateActionButtons();
                 });
     }
 
@@ -338,6 +391,57 @@ public class TripActivity extends AppCompatActivity {
             destinationsListener.remove();
             destinationsListener = null;
         }
+    }
+
+    // -------------------------
+    // ✅ START GALA CONFIRMATION
+    // -------------------------
+
+    private void confirmStartGala() {
+        if ("COMPLETED".equalsIgnoreCase(tripStatus)) {
+            Toast.makeText(this, "This trip is already completed.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // extra safety: if list empty (shouldn't happen)
+        if (!hasAtLeastOneDestination()) {
+            showNeedDestinationDialog("Start Gala");
+            return;
+        }
+
+        String title = "Start Gala?";
+        String msg;
+
+        if ("IN_PROGRESS".equalsIgnoreCase(tripStatus)) {
+            title = "Resume Gala?";
+            msg = "This trip is already in progress. Do you want to continue?";
+        } else if ("SCHEDULED".equalsIgnoreCase(tripStatus)) {
+            msg = "Are you sure you want to start now? This will begin your trip immediately.";
+        } else {
+            msg = "Are you sure you want to start this trip now?";
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(msg)
+                .setNegativeButton("Cancel", (d, w) -> {})
+                .setPositiveButton("Yes", (d, w) -> openStartGala())
+                .show();
+    }
+
+    private void openStartGala() {
+        Intent intent = new Intent(TripActivity.this, StartGala.class);
+        intent.putExtra("tripId", tripId);
+        startActivity(intent);
+    }
+
+    private void confirmActivateTrip() {
+        new AlertDialog.Builder(this)
+                .setTitle("Activate Trip?")
+                .setMessage("Are you sure you want to activate this template trip?")
+                .setNegativeButton("Cancel", (d, w) -> {})
+                .setPositiveButton("Yes", (d, w) -> activateTrip())
+                .show();
     }
 
     private void activateTrip() {
@@ -359,6 +463,9 @@ public class TripActivity extends AppCompatActivity {
                     btnPlanTrip.setVisibility(View.VISIBLE);
                     btnPlanTrip.setText("Plan Trip");
                     Toast.makeText(this, "Trip activated!", Toast.LENGTH_SHORT).show();
+
+                    // ✅ update button states now that template is off
+                    updateActionButtons();
                 })
                 .addOnFailureListener(e -> {
                     btnStartTrip.setEnabled(true);

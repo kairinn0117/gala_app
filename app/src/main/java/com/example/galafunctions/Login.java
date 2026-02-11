@@ -2,15 +2,18 @@ package com.example.galafunctions;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.annotation.Nullable;
-
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -28,23 +31,60 @@ public class Login extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private GoogleSignInClient googleSignInClient;
 
-    private static final int RC_GOOGLE_SIGN_IN = 100;
+    private EditText userField, passField;
+    private MaterialButton btnGoogle;
+    private android.widget.Button loginBtn;
+    private TextView goSignUp;
+
+    private final ActivityResultLauncher<Intent> googleLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                Intent data = result.getData();
+                if (data == null) {
+                    Toast.makeText(this, "Google sign-in cancelled.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                try {
+                    GoogleSignInAccount account = task.getResult(ApiException.class);
+                    if (account != null && account.getIdToken() != null) {
+                        firebaseAuthWithGoogle(account.getIdToken());
+                    } else {
+                        Toast.makeText(this, "Google token missing.", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (ApiException e) {
+                    Toast.makeText(this, "Google sign-in failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_login);
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
 
-        // ✅ Firebase Auth instance
         mAuth = FirebaseAuth.getInstance();
 
-        // ✅ Google Sign-In options (needs default_web_client_id)
+        // Views
+        userField = findViewById(R.id.user_field);
+        passField = findViewById(R.id.pass_field);
+        loginBtn = findViewById(R.id.login_btn);
+        btnGoogle = findViewById(R.id.btnGoogle);
+        goSignUp = findViewById(R.id.textView2);
+
+        // Text click -> SignUp
+        goSignUp.setOnClickListener(v -> startActivity(new Intent(Login.this, SignUp.class)));
+
+        // Email/Password login
+        loginBtn.setOnClickListener(v -> loginWithEmailPassword());
+
+        // Google setup
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
@@ -52,44 +92,38 @@ public class Login extends AppCompatActivity {
 
         googleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // ✅ Google button (make sure this ID exists in your XML)
-        MaterialButton btnGoogle = findViewById(R.id.btnGoogle);
-
-        btnGoogle.setOnClickListener(v -> {
-            Intent signInIntent = googleSignInClient.getSignInIntent();
-            startActivityForResult(signInIntent, RC_GOOGLE_SIGN_IN);
-        });
-
+        btnGoogle.setOnClickListener(v ->
+                googleLauncher.launch(googleSignInClient.getSignInIntent())
+        );
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-
-        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-            // User already logged in → skip login
+        if (mAuth.getCurrentUser() != null) {
             startActivity(new Intent(Login.this, MainActivity.class));
             finish();
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    private void loginWithEmailPassword() {
+        String email = userField.getText().toString().trim(); // treat your "username" as EMAIL
+        String pass = passField.getText().toString().trim();
 
-        if (requestCode == RC_GOOGLE_SIGN_IN) {
-            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
-            try {
-                GoogleSignInAccount account = task.getResult(ApiException.class);
-                if (account != null) {
-                    firebaseAuthWithGoogle(account.getIdToken());
-                } else {
-                    Toast.makeText(this, "Google account is null.", Toast.LENGTH_SHORT).show();
-                }
-            } catch (ApiException e) {
-                Toast.makeText(this, "Google sign-in failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+        if (TextUtils.isEmpty(email) || TextUtils.isEmpty(pass)) {
+            Toast.makeText(this, "Please enter email and password.", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        mAuth.signInWithEmailAndPassword(email, pass)
+                .addOnSuccessListener(authResult -> {
+                    Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(Login.this, MainActivity.class));
+                    finish();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                );
     }
 
     private void firebaseAuthWithGoogle(String idToken) {
@@ -101,9 +135,8 @@ public class Login extends AppCompatActivity {
                     startActivity(new Intent(Login.this, MainActivity.class));
                     finish();
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Google login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                );
     }
-
 }

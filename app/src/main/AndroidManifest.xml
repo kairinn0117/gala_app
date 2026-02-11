@@ -48,10 +48,6 @@
             android:name=".PlanTripActivity"
             android:exported="false" />
 
-        <receiver
-            android:name=".ReminderReceiver"
-            android:exported="false" />
-
         <activity
             android:name=".EditDestinationActivity"
             android:exported="false" />

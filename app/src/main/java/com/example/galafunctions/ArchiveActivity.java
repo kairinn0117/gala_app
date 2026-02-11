@@ -1,11 +1,11 @@
 package com.example.galafunctions;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.widget.Button;
+import android.view.View;
+import android.widget.ImageButton;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,10 +39,11 @@ public class ArchiveActivity extends AppCompatActivity {
     private RecyclerView rvArchived;
     private TextView tvEmpty;
     private EditText etSearch;
-    private Button btnFilter;
+    private ImageButton btnFilter, btnBack;
 
-    private final ArrayList<Trip> archivedList = new ArrayList<>();
-    private TripAdapter adapter;
+    private final ArrayList<ArchivedTrip> rawList = new ArrayList<>();
+    private final ArrayList<ArchivedTrip> displayList = new ArrayList<>();
+    private ArchivedTripAdapter adapter;
 
     private ListenerRegistration listener;
     private String searchQuery = "";
@@ -66,42 +67,41 @@ public class ArchiveActivity extends AppCompatActivity {
         tvEmpty = findViewById(R.id.tvEmpty);
         etSearch = findViewById(R.id.etSearch);
         btnFilter = findViewById(R.id.btnFilter);
+        btnBack = findViewById(R.id.btnBack);
+
+        btnBack.setOnClickListener(v -> finish());
 
         rvArchived.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new TripAdapter(this, archivedList);
+        adapter = new ArchivedTripAdapter(this, displayList, new ArchivedTripAdapter.OnArchivedTripClick() {
+            @Override
+            public void onClick(ArchivedTrip trip) {
+                // ✅ CLICK = SHOW OPTIONS ONLY (no TripActivity)
+                if (trip == null || TextUtils.isEmpty(trip.tripId)) return;
+                showOptionsDialog(trip);
+            }
+
+            @Override
+            public void onLongPress(ArchivedTrip trip) {
+                // ✅ LONG PRESS = SAME OPTIONS
+                if (trip == null || TextUtils.isEmpty(trip.tripId)) return;
+                showOptionsDialog(trip);
+            }
+        });
         rvArchived.setAdapter(adapter);
 
-        // Search
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void afterTextChanged(Editable s) {}
+
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchQuery = (s != null) ? s.toString().trim().toLowerCase() : "";
-                attachListener(); // reload filtered
+                applySearch();
             }
         });
 
-        // Filter placeholder
         btnFilter.setOnClickListener(v ->
                 Toast.makeText(this, "Filter (next step)", Toast.LENGTH_SHORT).show()
-        );
-
-        // ✅ Add long-press options (restore / delete to deleted_trips)
-        rvArchived.addOnItemTouchListener(
-                new RecyclerItemClickListener(this, rvArchived,
-                        (view, position) -> {
-                            // normal click -> open trip
-                            Trip t = archivedList.get(position);
-                            Intent i = new Intent(ArchiveActivity.this, TripActivity.class);
-                            i.putExtra("tripId", t.tripId);
-                            startActivity(i);
-                        },
-                        (view, position) -> {
-                            Trip t = archivedList.get(position);
-                            showOptionsDialog(t);
-                        }
-                )
         );
     }
 
@@ -117,16 +117,6 @@ public class ArchiveActivity extends AppCompatActivity {
         detachListener();
     }
 
-    private boolean matchesSearch(Trip t) {
-        if (TextUtils.isEmpty(searchQuery)) return true;
-
-        String name = (t.trip_name != null) ? t.trip_name.toLowerCase() : "";
-        String loc  = (t.location != null) ? t.location.toLowerCase() : "";
-        String cat  = (t.trip_category != null) ? t.trip_category.toLowerCase() : "";
-
-        return name.contains(searchQuery) || loc.contains(searchQuery) || cat.contains(searchQuery);
-    }
-
     private void attachListener() {
         detachListener();
 
@@ -136,7 +126,6 @@ public class ArchiveActivity extends AppCompatActivity {
         listener = db.collection("users")
                 .document(uid)
                 .collection("trips")
-                // archived rules: either status == ARCHIVED or is_archived == true (support both)
                 .whereEqualTo("is_archived", true)
                 .orderBy("archived_at", Query.Direction.DESCENDING)
                 .addSnapshotListener((snap, e) -> {
@@ -146,19 +135,39 @@ public class ArchiveActivity extends AppCompatActivity {
                     }
                     if (snap == null) return;
 
-                    archivedList.clear();
-
+                    rawList.clear();
                     for (DocumentSnapshot doc : snap.getDocuments()) {
-                        Trip t = doc.toObject(Trip.class);
+                        ArchivedTrip t = doc.toObject(ArchivedTrip.class);
                         if (t != null) {
                             t.tripId = doc.getId();
-                            if (matchesSearch(t)) archivedList.add(t);
+                            rawList.add(t);
                         }
                     }
 
-                    adapter.notifyDataSetChanged();
-                    tvEmpty.setVisibility(archivedList.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
+                    applySearch();
                 });
+    }
+
+    private void applySearch() {
+        displayList.clear();
+
+        for (ArchivedTrip t : rawList) {
+            if (t == null) continue;
+            if (matchesSearch(t)) displayList.add(t);
+        }
+
+        adapter.notifyDataSetChanged();
+        tvEmpty.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean matchesSearch(ArchivedTrip t) {
+        if (TextUtils.isEmpty(searchQuery)) return true;
+
+        String name = (t.trip_name != null) ? t.trip_name.toLowerCase() : "";
+        String loc  = (t.location != null) ? t.location.toLowerCase() : "";
+        String cat  = (t.trip_category != null) ? t.trip_category.toLowerCase() : "";
+
+        return name.contains(searchQuery) || loc.contains(searchQuery) || cat.contains(searchQuery);
     }
 
     private void detachListener() {
@@ -168,30 +177,54 @@ public class ArchiveActivity extends AppCompatActivity {
         }
     }
 
-    private void showOptionsDialog(Trip trip) {
+    // -------------------------
+    // ✅ OPTIONS
+    // -------------------------
+
+    private void showOptionsDialog(ArchivedTrip trip) {
+        String title = !TextUtils.isEmpty(trip.trip_name) ? trip.trip_name : "Archived Gala";
+
         new AlertDialog.Builder(this)
-                .setTitle(trip.trip_name != null ? trip.trip_name : "Trip")
-                .setItems(new CharSequence[]{"Restore", "Delete (move to Deleted)"}, (dialog, which) -> {
-                    if (which == 0) restoreTrip(trip);
-                    else moveToDeleted(trip);
+                .setTitle(title)
+                .setItems(new CharSequence[]{
+                        "Restore",
+                        "Permanent Delete"
+                }, (dialog, which) -> {
+                    if (which == 0) {
+                        restoreTrip(trip.tripId);
+                    } else {
+                        confirmPermanentDelete(trip);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void restoreTrip(Trip trip) {
+    private void confirmPermanentDelete(ArchivedTrip trip) {
+        String name = !TextUtils.isEmpty(trip.trip_name) ? trip.trip_name : "this gala";
+
+        new AlertDialog.Builder(this)
+                .setTitle("Permanent Delete?")
+                .setMessage("Are you sure you want to permanently delete \"" + name + "\"?\n\n" +
+                        "It will be moved to Permanent Deleted (so you still have a record).")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Delete", (d, w) -> moveToPermanentDeleted(trip))
+                .show();
+    }
+
+    private void restoreTrip(String tripId) {
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("is_archived", false);
         updates.put("archived_at", null);
-        updates.put("status", "PLANNED"); // balik planned
+        updates.put("status", "PLANNED"); // adjust if you want
 
         db.collection("users")
                 .document(uid)
                 .collection("trips")
-                .document(trip.tripId)
+                .document(tripId)
                 .update(updates)
                 .addOnSuccessListener(unused ->
                         Toast.makeText(this, "Restored!", Toast.LENGTH_SHORT).show()
@@ -201,41 +234,39 @@ public class ArchiveActivity extends AppCompatActivity {
                 );
     }
 
-    private void moveToDeleted(Trip trip) {
+    // ✅ move to a safe place instead of true delete
+    private void moveToPermanentDeleted(ArchivedTrip trip) {
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
-        // Copy fields to deleted_trips
         Map<String, Object> deleted = new HashMap<>();
         deleted.put("trip_name", trip.trip_name);
         deleted.put("location", trip.location);
-        deleted.put("date", trip.date);
-        deleted.put("time", trip.time);
-        deleted.put("cover_url", trip.cover_url);
         deleted.put("trip_category", trip.trip_category);
         deleted.put("status", trip.status);
-        deleted.put("is_template", trip.is_template);
+        deleted.put("cover_url", trip.cover_url);
         deleted.put("budget_enabled", trip.budget_enabled);
         deleted.put("trip_budget", trip.trip_budget);
-        deleted.put("total_spent", trip.total_spent);
 
-        deleted.put("deleted_at", Timestamp.now());
+        // keep archive metadata if you want
+        deleted.put("archived_at", trip.archived_at);
 
-        // 1) Save to deleted_trips
+        deleted.put("permanent_deleted_at", Timestamp.now());
+
         db.collection("users")
                 .document(uid)
-                .collection("deleted_trips")
+                .collection("permanent_deleted_trips")
                 .document(trip.tripId)
                 .set(deleted)
                 .addOnSuccessListener(unused -> {
-                    // 2) Remove from trips (soft delete to separate collection)
+                    // remove from active trips after copying
                     db.collection("users")
                             .document(uid)
                             .collection("trips")
                             .document(trip.tripId)
                             .delete()
                             .addOnSuccessListener(u2 ->
-                                    Toast.makeText(this, "Moved to Deleted!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this, "Moved to Permanent Deleted!", Toast.LENGTH_SHORT).show()
                             )
                             .addOnFailureListener(e ->
                                     Toast.makeText(this, "Delete failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()

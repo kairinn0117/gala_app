@@ -7,7 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Combined Cover ImageButton -->
+    <!-- Cover -->
     <ImageButton
         android:id="@+id/imgCover"
         android:layout_width="0dp"
@@ -54,6 +54,18 @@
                 android:outlineProvider="background"
                 android:entries="@array/trip_categories"/>
 
+            <!-- Custom category (shown only when Others selected) -->
+            <EditText
+                android:id="@+id/etCustomCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/rounded_edittext"
+                android:hint="Type your trip category"
+                android:minHeight="48dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
             <EditText
                 android:id="@+id/etTripName"
                 android:layout_width="match_parent"
@@ -78,7 +90,15 @@
                     android:layout_weight="1"
                     android:background="@drawable/rounded_edittext"
                     android:minHeight="48dp"
-                    android:hint="Location"/>
+                    android:hint="Location"
+
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:longClickable="false"
+                    android:inputType="none"
+                    android:importantForAutofill="no"/>
 
                 <ImageButton
                     android:id="@+id/btnTripSearchMap"

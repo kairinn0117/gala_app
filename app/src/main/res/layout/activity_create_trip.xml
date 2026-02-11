@@ -54,6 +54,17 @@
                 android:entries="@array/trip_categories"/>
 
             <EditText
+                android:id="@+id/etCustomCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/rounded_edittext"
+                android:hint="Type your category"
+                android:inputType="textCapWords"
+                android:minHeight="48dp"
+                android:visibility="gone" />
+
+            <EditText
                 android:id="@+id/etTripName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -76,7 +87,13 @@
                     android:layout_weight="1"
                     android:background="@drawable/rounded_edittext"
                     android:minHeight="48dp"
-                    android:hint="Location"/>
+                    android:hint="Location"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:inputType="none"
+                    android:importantForAutofill="no"/>
 
                 <ImageButton
                     android:id="@+id/btnTripSearchMap"

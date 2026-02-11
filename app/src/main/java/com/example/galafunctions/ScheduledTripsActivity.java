@@ -35,7 +35,7 @@ public class ScheduledTripsActivity extends AppCompatActivity {
     private RecyclerView rvScheduled;
     private TextView tvEmpty;
     private EditText etSearch;
-    private Button btnFilter;
+    private ImageButton btnFilter;
 
     private final ArrayList<ScheduledTrip> rawList = new ArrayList<>();
     private final ArrayList<ScheduledTrip> displayList = new ArrayList<>();

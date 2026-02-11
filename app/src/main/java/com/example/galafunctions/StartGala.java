@@ -13,6 +13,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
@@ -84,6 +85,14 @@ public class StartGala extends AppCompatActivity {
             return insets;
         });
 
+        // ✅ System back (phone back) goes HOME (not TripActivity)
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                goHome();
+            }
+        });
+
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
         storage = FirebaseStorage.getInstance();
@@ -109,6 +118,8 @@ public class StartGala extends AppCompatActivity {
         btnEndTrip = findViewById(R.id.btnEndTrip);
         btnDoneNext = findViewById(R.id.btnDoneNext);
         btnBack = findViewById(R.id.btnBack);
+
+        // ✅ Directions now is in TOP header
         btnDirections = findViewById(R.id.btnDirections);
 
         // ✅ extras wrapper
@@ -123,16 +134,14 @@ public class StartGala extends AppCompatActivity {
         etSpent = findViewById(R.id.etSpent);
         btnAddSpent = findViewById(R.id.btnAddSpent);
 
-        btnEndTrip.setOnClickListener(v -> endTrip());
-        btnDoneNext.setOnClickListener(v -> markDoneAndNext());
+        // ✅ confirm actions
+        btnEndTrip.setOnClickListener(v -> confirmEndTrip());
+        btnDoneNext.setOnClickListener(v -> confirmDoneNext());
 
-        btnBack.setOnClickListener(v -> {
-            Intent i = new Intent(StartGala.this, MainActivity.class);
-            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(i);
-            finish();
-        });
+        // ✅ Back button goes HOME too
+        btnBack.setOnClickListener(v -> goHome());
 
+        // ✅ Directions click
         btnDirections.setOnClickListener(v -> openDirections());
 
         // Photo picker
@@ -146,12 +155,155 @@ public class StartGala extends AppCompatActivity {
         );
 
         btnAddPhoto.setOnClickListener(v -> photoPicker.launch("image/*"));
-        btnAddSpent.setOnClickListener(v -> addSpent());
+        btnAddSpent.setOnClickListener(v -> confirmAddSpent());
 
         startGalaNowIfNeeded();
         loadTripTitle();
         loadDestinations();
     }
+
+    // ✅ Always go to MainActivity -> HomeFragment
+    private void goHome() {
+        Intent i = new Intent(StartGala.this, MainActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        i.putExtra("open_fragment", "home"); // MainActivity reads this and opens Home tab
+        startActivity(i);
+        finish();
+    }
+
+    // -------------------------
+    // ✅ CONFIRMATION DIALOGS
+    // -------------------------
+
+    private void confirmAddSpent() {
+        if (auth.getCurrentUser() == null) return;
+        if (destinations.isEmpty() || currentIndex >= destinations.size()) return;
+
+        String input = etSpent.getText().toString().trim();
+        if (TextUtils.isEmpty(input)) {
+            etSpent.setError("Required");
+            return;
+        }
+
+        double add;
+        try {
+            add = Double.parseDouble(input);
+            if (add <= 0) {
+                etSpent.setError("Must be > 0");
+                return;
+            }
+        } catch (Exception e) {
+            etSpent.setError("Invalid number");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Confirm Spending")
+                .setMessage("Add ₱" + String.format("%.2f", add) + " as spending?")
+                .setNegativeButton("Cancel", (d, w) -> {})
+                .setPositiveButton("Yes", (d, w) -> addSpentConfirmed(add))
+                .show();
+    }
+
+    private void addSpentConfirmed(double add) {
+        if (auth.getCurrentUser() == null) return;
+        if (destinations.isEmpty() || currentIndex >= destinations.size()) return;
+
+        DocumentSnapshot d = destinations.get(currentIndex);
+        Double budget = d.getDouble("budget");
+        Double spent = d.getDouble("spent_total");
+        if (spent == null) spent = 0.0;
+
+        double newSpent = spent + add;
+
+        if (budget == null) {
+            saveSpentToFirestore(newSpent);
+            return;
+        }
+
+        if (newSpent > budget) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Overspend?")
+                    .setMessage("This will exceed the budget.\n\nBudget: ₱" + String.format("%.2f", budget)
+                            + "\nNew Spent: ₱" + String.format("%.2f", newSpent)
+                            + "\n\nContinue anyway?")
+                    .setNegativeButton("No", (dialog, which) -> {})
+                    .setPositiveButton("Yes", (dialog, which) -> saveSpentToFirestore(newSpent))
+                    .show();
+        } else {
+            saveSpentToFirestore(newSpent);
+        }
+    }
+
+    private void confirmDoneNext() {
+        if (auth.getCurrentUser() == null) return;
+        if (destinations.isEmpty() || currentIndex >= destinations.size()) return;
+
+        DocumentSnapshot current = destinations.get(currentIndex);
+        String destName = current.getString("destination_name");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Mark as Done?")
+                .setMessage("Are you sure you want to mark this destination as DONE?\n\n"
+                        + (TextUtils.isEmpty(destName) ? "" : ("Destination: " + destName)))
+                .setNegativeButton("Cancel", (d, w) -> {})
+                .setPositiveButton("Yes", (d, w) -> markDoneAndNext())
+                .show();
+    }
+
+    private void confirmEndTrip() {
+        if (auth.getCurrentUser() == null) return;
+
+        String uid = auth.getCurrentUser().getUid();
+
+        // ✅ check pending straight from Firestore (accurate)
+        db.collection("users")
+                .document(uid)
+                .collection("trips")
+                .document(tripId)
+                .collection("destinations")
+                .whereEqualTo("status", "PENDING")
+                .limit(1)
+                .get()
+                .addOnSuccessListener(qs -> {
+                    boolean hasPending = (qs != null && !qs.isEmpty());
+
+                    String msg = hasPending
+                            ? "Some destinations are still PENDING.\n\nAre you sure you want to end the trip anyway?"
+                            : "Are you sure you want to end this trip?";
+
+                    new AlertDialog.Builder(this)
+                            .setTitle("End Trip")
+                            .setMessage(msg)
+                            .setNegativeButton("Cancel", (d, w) -> {})
+                            .setPositiveButton("Yes", (d, w) -> endTrip())
+                            .show();
+                })
+                .addOnFailureListener(e -> {
+                    // fallback if query fails
+                    new AlertDialog.Builder(this)
+                            .setTitle("End Trip")
+                            .setMessage("Are you sure you want to end this trip?")
+                            .setNegativeButton("Cancel", (d, w) -> {})
+                            .setPositiveButton("Yes", (d, w) -> endTrip())
+                            .show();
+                });
+    }
+
+
+    private boolean hasAnyPendingDestination() {
+        if (destinations.isEmpty()) return false;
+
+        for (DocumentSnapshot ds : destinations) {
+            String st = ds.getString("status");
+            if (TextUtils.isEmpty(st) || "PENDING".equalsIgnoreCase(st)) return true;
+        }
+        return false;
+    }
+
+    // -------------------------
+    // EXISTING LOGIC
+    // -------------------------
 
     private void startGalaNowIfNeeded() {
         if (auth.getCurrentUser() == null) return;
@@ -246,7 +398,6 @@ public class StartGala extends AppCompatActivity {
         btnEndTrip.setEnabled(true);
     }
 
-    // ✅ finished UI mode
     private void setFinishedUI() {
         tvProgress.setText("All destinations completed ✅");
         tvDestName.setText("Done!");
@@ -261,8 +412,6 @@ public class StartGala extends AppCompatActivity {
         btnDoneNext.setEnabled(false);
         btnBack.setEnabled(false);
         btnDirections.setEnabled(false);
-
-        // only End Trip
         btnEndTrip.setEnabled(true);
     }
 
@@ -274,13 +423,11 @@ public class StartGala extends AppCompatActivity {
 
         if (currentIndex < 0) currentIndex = 0;
 
-        // ✅ finished all
         if (currentIndex >= destinations.size()) {
             setFinishedUI();
             return;
         }
 
-        // ✅ normal mode
         btnBack.setEnabled(true);
         btnDirections.setEnabled(true);
         btnDoneNext.setEnabled(true);
@@ -360,50 +507,9 @@ public class StartGala extends AppCompatActivity {
                 Uri.parse("https://www.google.com/maps/dir/?api=1&destination=" + Uri.encode(address))));
     }
 
-    private void addSpent() {
-        if (auth.getCurrentUser() == null) return;
-        if (destinations.isEmpty() || currentIndex >= destinations.size()) return;
-
-        String input = etSpent.getText().toString().trim();
-        if (TextUtils.isEmpty(input)) {
-            etSpent.setError("Required");
-            return;
-        }
-
-        double add;
-        try {
-            add = Double.parseDouble(input);
-            if (add <= 0) { etSpent.setError("Must be > 0"); return; }
-        } catch (Exception e) {
-            etSpent.setError("Invalid number");
-            return;
-        }
-
-        DocumentSnapshot d = destinations.get(currentIndex);
-        Double budget = d.getDouble("budget");
-        Double spent = d.getDouble("spent_total");
-        if (spent == null) spent = 0.0;
-
-        double newSpent = spent + add;
-
-        if (budget == null) {
-            saveSpentToFirestore(newSpent);
-            return;
-        }
-
-        if (newSpent > budget) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Overspend?")
-                    .setMessage("This will exceed the budget (₱" + String.format("%.2f", budget) + "). Continue?")
-                    .setNegativeButton("No", (dialog, which) -> {})
-                    .setPositiveButton("Yes", (dialog, which) -> saveSpentToFirestore(newSpent))
-                    .show();
-        } else {
-            saveSpentToFirestore(newSpent);
-        }
-    }
-
     private void saveSpentToFirestore(double newSpent) {
+        if (auth.getCurrentUser() == null) return;
+
         String uid = auth.getCurrentUser().getUid();
         String destId = destinations.get(currentIndex).getId();
 
@@ -436,7 +542,6 @@ public class StartGala extends AppCompatActivity {
 
         btnAddPhoto.setEnabled(false);
 
-        // optional: keep file extension
         String ext = "jpg";
         String mime = getContentResolver().getType(uri);
         if (mime != null) {
@@ -457,10 +562,7 @@ public class StartGala extends AppCompatActivity {
                     Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 })
                 .continueWithTask(task -> {
-                    // ✅ IMPORTANT: if upload failed, stop here
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
-                    }
+                    if (!task.isSuccessful()) throw task.getException();
                     return ref.getDownloadUrl();
                 })
                 .addOnSuccessListener(downloadUri -> {
@@ -494,7 +596,6 @@ public class StartGala extends AppCompatActivity {
                     Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
-
 
     private void markDoneAndNext() {
         if (auth.getCurrentUser() == null) return;
@@ -531,15 +632,9 @@ public class StartGala extends AppCompatActivity {
         btnEndTrip.setEnabled(false);
 
         Map<String, Object> updates = new HashMap<>();
-
-        // ✅ Finished (Gallery)
         updates.put("status", "COMPLETED");
         updates.put("ended_at", Timestamp.now());
-
-        // ✅ NOT archived (kasi archived is separate bucket)
         updates.put("is_archived", false);
-
-        // cleanup
         updates.put("active_at", null);
 
         db.collection("users")
@@ -547,13 +642,7 @@ public class StartGala extends AppCompatActivity {
                 .collection("trips")
                 .document(tripId)
                 .update(updates)
-                .addOnSuccessListener(unused -> {
-                    // balik home
-                    Intent intent = new Intent(StartGala.this, MainActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    startActivity(intent);
-                    finish();
-                })
+                .addOnSuccessListener(unused -> goHome())
                 .addOnFailureListener(e -> {
                     btnEndTrip.setEnabled(true);
                     Toast.makeText(this, "End failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
