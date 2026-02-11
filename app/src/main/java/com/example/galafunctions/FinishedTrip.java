@@ -1,5 +1,7 @@
 package com.example.galafunctions;
 
+import com.google.firebase.Timestamp;
+
 public class FinishedTrip {
     public String tripId;
 
@@ -20,7 +22,7 @@ public class FinishedTrip {
     public String status;
     public Boolean is_archived;
 
-    public Long ended_at; // if you ever store it
+    public Timestamp ended_at;
 
     public FinishedTrip() {}
 }

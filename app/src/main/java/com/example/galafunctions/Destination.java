@@ -1,5 +1,7 @@
 package com.example.galafunctions;
 
+import com.google.firebase.Timestamp;
+
 public class Destination {
     public String destinationId;
 
@@ -19,6 +21,13 @@ public class Destination {
 
     public String description;
     public String status;
+
+    // ✅ ADD THIS (for StartGala uploaded photo)
+    public String photo_url;
+
+    // ✅ Optional but recommended (if you already store these)
+    public Timestamp created_at;
+    public Timestamp updated_at;
 
     public Destination() {}
 }

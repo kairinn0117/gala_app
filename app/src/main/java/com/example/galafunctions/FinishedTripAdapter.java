@@ -64,7 +64,9 @@ public class FinishedTripAdapter extends RecyclerView.Adapter<FinishedTripAdapte
 
         h.itemView.setOnClickListener(v -> {
             if (t.tripId == null) return;
-            Intent i = new Intent(context, TripActivity.class);
+
+            // ✅ go to destinations report viewer (READ ONLY)
+            Intent i = new Intent(context, DestinationsReportActivity.class);
             i.putExtra("tripId", t.tripId);
             context.startActivity(i);
         });

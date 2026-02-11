@@ -36,14 +36,17 @@ public class Gallery extends Fragment {
     private EditText etGallerySearch;
     private Button btnGalleryFilter;
 
-    private final ArrayList<Trip> rawList = new ArrayList<>();
-    private final ArrayList<Trip> displayList = new ArrayList<>();
-    private TripAdapter adapter;
+    // ✅ IMPORTANT: use FinishedTrip model (NOT Trip)
+    private final ArrayList<FinishedTrip> rawList = new ArrayList<>();
+    private final ArrayList<FinishedTrip> displayList = new ArrayList<>();
+
+    // ✅ IMPORTANT: use FinishedTripAdapter (NOT TripAdapter)
+    private FinishedTripAdapter adapter;
 
     private ListenerRegistration finishedListener;
     private String searchQuery = "";
 
-    public Gallery() { }
+    public Gallery() {}
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -59,14 +62,15 @@ public class Gallery extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_gallery, container, false);
 
-        // ✅ Make sure these IDs exist in fragment_gallery.xml
         rvFinishedTrips = view.findViewById(R.id.rvFinishedTrips);
         tvEmptyFinished = view.findViewById(R.id.tvEmptyFinished);
         etGallerySearch = view.findViewById(R.id.etGallerySearch);
         btnGalleryFilter = view.findViewById(R.id.btnGalleryFilter);
 
         rvFinishedTrips.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new TripAdapter(requireContext(), displayList);
+
+        // ✅ adapter for finished trips
+        adapter = new FinishedTripAdapter(requireContext(), displayList);
         rvFinishedTrips.setAdapter(adapter);
 
         btnGalleryFilter.setOnClickListener(v ->
@@ -105,13 +109,12 @@ public class Gallery extends Fragment {
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
-        // ✅ FINISHED = COMPLETED, NOT archived
         finishedListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
                 .whereEqualTo("status", "COMPLETED")
                 .whereEqualTo("is_archived", false)
-                .orderBy("ended_at", Query.Direction.DESCENDING) // best sorting for finished
+                .orderBy("ended_at", Query.Direction.DESCENDING)
                 .addSnapshotListener((snap, e) -> {
                     if (e != null) {
                         Toast.makeText(getContext(), "Load error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -122,7 +125,7 @@ public class Gallery extends Fragment {
                     rawList.clear();
 
                     for (DocumentSnapshot doc : snap.getDocuments()) {
-                        Trip t = doc.toObject(Trip.class);
+                        FinishedTrip t = doc.toObject(FinishedTrip.class);
                         if (t != null) {
                             t.tripId = doc.getId();
                             rawList.add(t);
@@ -136,7 +139,7 @@ public class Gallery extends Fragment {
     private void applySearch() {
         displayList.clear();
 
-        for (Trip t : rawList) {
+        for (FinishedTrip t : rawList) {
             if (t == null) continue;
             if (matchesSearch(t)) displayList.add(t);
         }
@@ -145,7 +148,7 @@ public class Gallery extends Fragment {
         tvEmptyFinished.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    private boolean matchesSearch(Trip t) {
+    private boolean matchesSearch(FinishedTrip t) {
         if (TextUtils.isEmpty(searchQuery)) return true;
 
         String name = (t.trip_name != null) ? t.trip_name.toLowerCase() : "";
