@@ -35,6 +35,7 @@
                 android:id="@+id/etDestinationName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Destination name"
                 android:inputType="textPersonName"
                 android:minHeight="48dp" />
@@ -49,6 +50,7 @@
                 android:id="@+id/spDestinationType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/spinner_background"
                 android:entries="@array/destination_types"
                 android:layout_marginTop="6dp"
                 android:minHeight="48dp" />
@@ -64,6 +66,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:background="@drawable/rounded_edittext"
                     android:hint="Location"
                     android:inputType="text"/>
 
@@ -88,6 +91,7 @@
                     android:id="@+id/etDestinationBudget"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/rounded_edittext"
                     android:hint="Budget (e.g., 1500)"
                     android:inputType="numberDecimal"
                     android:minHeight="48dp"/>
@@ -103,6 +107,7 @@
                 android:id="@+id/etDestTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Pick time"
                 android:focusable="false"
                 android:clickable="true"
@@ -113,6 +118,7 @@
                 android:id="@+id/etDestinationDescription"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
+                android:background="@drawable/rounded_edittext"
                 android:hint="Description"
                 android:layout_marginTop="10dp"
                 android:gravity="top"
