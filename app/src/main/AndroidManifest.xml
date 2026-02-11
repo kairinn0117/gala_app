@@ -30,6 +30,12 @@
             android:exported="false" />
 
         <activity
+            android:name=".DeleteAccount"
+            android:exported="false" />
+        <activity
+            android:name=".Account"
+            android:exported="false" />
+        <activity
             android:name=".EditDestinationActivity"
             android:exported="false" />
         <activity
