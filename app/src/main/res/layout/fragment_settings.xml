@@ -11,28 +11,28 @@
 
     <!-- USER NAME -->
 
+    <!-- PERSONAL INFO -->
+
+    <!-- ARCHIVE -->
+
     <ImageButton
         android:id="@+id/imgProfile"
         android:layout_width="48dp"
         android:layout_height="54dp"
-        android:layout_marginTop="44dp"
+        android:layout_marginTop="60dp"
         android:background="@android:color/transparent"
         android:scaleType="centerCrop"
         android:src="@drawable/circle_addpic"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.045"
+        app:layout_constraintHorizontal_bias="0.044"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- PERSONAL INFO -->
-
-    <!-- ARCHIVE -->
 
     <TextView
         android:id="@+id/textView4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="76dp"
         android:layout_marginEnd="168dp"
         android:text="User"
         android:textColor="@color/black"

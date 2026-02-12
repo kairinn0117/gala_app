@@ -8,16 +8,21 @@
     android:background="@drawable/about_usbg"
     tools:context=".AboutUs">
 
+    <!-- Back Button - Pinned to Top Left with safe margins -->
     <ImageButton
         android:id="@+id/btnBackAboutUs"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="26dp"
-        android:layout_marginTop="70dp"
-        android:layout_marginEnd="176dp"
-        android:background="#00FFFFFF"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Back"
+        android:padding="12dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/aboutus_btn" />
+
+    <!-- Optional: Kung gusto mo lagyan ng scrollable text sa gitna -->
+    <!-- Dahil ang background ay madalas fixed image, dito mo ipapatong ang text content -->
+
 </androidx.constraintlayout.widget.ConstraintLayout>

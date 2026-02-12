@@ -8,7 +8,6 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- App title image -->
     <ImageView
         android:id="@+id/ivHomeTitle"
         android:layout_width="wrap_content"
@@ -18,7 +17,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Filter button -->
     <ImageButton
         android:id="@+id/btnFilter"
         android:layout_width="wrap_content"
@@ -26,23 +24,21 @@
         android:background="@android:color/transparent"
         android:src="@drawable/filter"
         android:contentDescription="Filter"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivHomeTitle"
+        app:layout_constraintBottom_toBottomOf="@id/ivHomeTitle"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Search Background Image -->
     <ImageView
         android:id="@+id/ivSearchBg"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitXY"
-        android:contentDescription="Search Background"
         app:layout_constraintBottom_toBottomOf="@id/etSearch"
         app:layout_constraintEnd_toEndOf="@id/etSearch"
         app:layout_constraintStart_toStartOf="@id/etSearch"
         app:layout_constraintTop_toTopOf="@id/etSearch"
         app:srcCompat="@drawable/searchbox" />
 
-    <!-- Search -->
     <EditText
         android:id="@+id/etSearch"
         android:layout_width="0dp"
@@ -58,19 +54,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Planned Trips button -->
     <ImageButton
         android:id="@+id/btnPlanned"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
         android:src="@drawable/scheduledtripsbtn"
-        android:contentDescription="Scheduled Trips"
         android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@id/etSearch"
         app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Empty state -->
     <TextView
         android:id="@+id/tvEmptyTrips"
         android:layout_width="0dp"
@@ -78,24 +71,23 @@
         android:text="No planned trips yet."
         android:visibility="gone"
         android:alpha="0.7"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@id/btnPlanned"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvTrips"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        android:paddingBottom="90dp"
+        android:paddingBottom="80dp"
+        android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/btnPlanned"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- FAB replaced with ImageButton for consistency with custom graphic -->
     <ImageButton
         android:id="@+id/fabAddGala"
         android:layout_width="wrap_content"
@@ -103,7 +95,6 @@
         android:layout_margin="16dp"
         android:background="@android:color/transparent"
         android:src="@drawable/addbtn"
-        android:contentDescription="Add Gala"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
