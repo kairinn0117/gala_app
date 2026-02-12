@@ -7,6 +7,7 @@
         <item>Hotel</item>
         <item>Tourist Spot</item>
         <item>Food</item>
+        <item>OTHER</item>
     </string-array>
     <string-array name="trip_categories">
         <item>GALA</item>

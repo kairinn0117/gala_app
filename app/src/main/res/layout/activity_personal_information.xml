@@ -9,7 +9,7 @@
     tools:context=".PersonalInformation">
 
     <ImageButton
-        android:id="@+id/imageButton"
+        android:id="@+id/addPhoto"
         android:layout_width="70dp"
         android:layout_height="59dp"
         android:layout_marginStart="170dp"
@@ -19,52 +19,40 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageButton10"
+        app:layout_constraintTop_toBottomOf="@+id/Backbtn"
         app:srcCompat="@drawable/circle_addpic" />
 
     <EditText
         android:id="@+id/editTextText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="285dp"
+        android:layout_height="38dp"
         android:layout_marginStart="56dp"
-        android:layout_marginTop="60dp"
+        android:layout_marginTop="64dp"
         android:layout_marginEnd="145dp"
         android:ems="10"
         android:hint="Enter Username"
         android:inputType="text"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageButton" />
+        app:layout_constraintTop_toBottomOf="@+id/addPhoto" />
 
     <ImageButton
-        android:id="@+id/imageButton8"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="85dp"
-        android:layout_marginTop="156dp"
-        android:layout_marginEnd="86dp"
-        android:background="#00FFFFFF"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/editTextText"
-        app:srcCompat="@drawable/save_but" />
-
-    <ImageButton
-        android:id="@+id/imageButton9"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:id="@+id/btnDeleteAccount"
+        android:layout_width="283dp"
+        android:layout_height="64dp"
         android:layout_marginStart="97dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="98dp"
         android:background="#00FFFFFF"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.492"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageButton8"
+        app:layout_constraintTop_toBottomOf="@+id/btnChangePassword"
         app:srcCompat="@drawable/del_acc" />
 
     <ImageButton
-        android:id="@+id/imageButton10"
+        android:id="@+id/Backbtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="30dp"
@@ -78,14 +66,15 @@
         app:srcCompat="@drawable/personal_inf" />
 
     <ImageButton
-        android:id="@+id/imageButton12"
+        android:id="@+id/btnChangePassword"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="59dp"
-        android:layout_marginTop="79dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="59dp"
         android:background="#00FFFFFF"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/editTextText"
         app:srcCompat="@drawable/changepass" />

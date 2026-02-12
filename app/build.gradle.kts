@@ -33,6 +33,13 @@ android {
 }
 
 dependencies {
+    // Room (Java)
+    implementation ("androidx.room:room-runtime:2.6.1")
+    annotationProcessor ("androidx.room:room-compiler:2.6.1")
+    // WorkManager (Java)
+    implementation("androidx.work:work-runtime:2.9.0")
+    // Notification compat (usually already included, pero safe)
+    implementation("androidx.core:core:1.13.1")
     implementation("com.google.android.libraries.places:places:3.5.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation ("com.github.bumptech.glide:glide:4.16.0")

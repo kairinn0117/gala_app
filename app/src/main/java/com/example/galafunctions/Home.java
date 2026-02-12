@@ -50,6 +50,9 @@ public class Home extends Fragment {
     private ListenerRegistration plannedListener;
     private String searchQuery = "";
 
+    // ✅ Added sort mode
+    private int sortMode = 0; // 0 = default, 1 = A-Z, 2 = Z-A
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -78,7 +81,6 @@ public class Home extends Fragment {
         adapter = new TripAdapter(requireContext(), displayList);
         rvTrips.setAdapter(adapter);
 
-        // ✅ SWIPE TO ARCHIVE
         attachSwipeToArchive();
 
         fabAddGala.setOnClickListener(v ->
@@ -90,9 +92,8 @@ public class Home extends Fragment {
             startActivity(new Intent(getActivity(), ScheduledTripsActivity.class));
         });
 
-        btnFilter.setOnClickListener(v ->
-                Toast.makeText(getContext(), "Filter next step.", Toast.LENGTH_SHORT).show()
-        );
+        // ✅ FILTER BUTTON CLICK
+        btnFilter.setOnClickListener(v -> showSortDialog());
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -128,7 +129,6 @@ public class Home extends Fragment {
         plannedListener = db.collection("users")
                 .document(uid)
                 .collection("trips")
-                // NOTE: You can change this to show also SCHEDULED / IN_PROGRESS if you want
                 .whereEqualTo("status", "PLANNED")
                 .whereEqualTo("is_archived", false)
                 .addSnapshotListener((snap, e) -> {
@@ -160,6 +160,8 @@ public class Home extends Fragment {
             if (matchesSearch(t)) displayList.add(t);
         }
 
+        applySort(); // ✅ Apply selected sort
+
         adapter.notifyDataSetChanged();
         tvEmptyTrips.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
     }
@@ -174,6 +176,41 @@ public class Home extends Fragment {
         return name.contains(searchQuery) || loc.contains(searchQuery) || cat.contains(searchQuery);
     }
 
+    // ✅ SORT DIALOG
+    private void showSortDialog() {
+        String[] options = {"Sort A-Z", "Sort Z-A"};
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Sort Trips")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        sortMode = 1;
+                        Toast.makeText(getContext(), "Sorted A-Z", Toast.LENGTH_SHORT).show();
+                    } else {
+                        sortMode = 2;
+                        Toast.makeText(getContext(), "Sorted Z-A", Toast.LENGTH_SHORT).show();
+                    }
+                    applySearch();
+                })
+                .show();
+    }
+
+    // ✅ APPLY SORT
+    private void applySort() {
+        if (sortMode == 0) return;
+
+        displayList.sort((t1, t2) -> {
+            String n1 = (t1.trip_name != null) ? t1.trip_name.toLowerCase() : "";
+            String n2 = (t2.trip_name != null) ? t2.trip_name.toLowerCase() : "";
+
+            if (sortMode == 1) {
+                return n1.compareTo(n2); // A-Z
+            } else {
+                return n2.compareTo(n1); // Z-A
+            }
+        });
+    }
+
     private void detachListener() {
         if (plannedListener != null) {
             plannedListener.remove();
@@ -182,7 +219,7 @@ public class Home extends Fragment {
     }
 
     // -------------------------
-    // ✅ Swipe to Archive
+    // Swipe to Archive
     // -------------------------
 
     private void attachSwipeToArchive() {
@@ -223,12 +260,13 @@ public class Home extends Fragment {
 
         new AlertDialog.Builder(requireContext())
                 .setTitle("Archive Gala?")
-                .setMessage("Are you sure you want to archive \"" + name + "\"?\n\nYou can restore it later in Archive.")
-                .setNegativeButton("Cancel", (d, w) -> {
-                    // reset swipe
-                    adapter.notifyItemChanged(swipedPosition);
-                })
-                .setPositiveButton("Archive", (d, w) -> archiveTrip(trip.tripId))
+                .setMessage("Are you sure you want to archive \"" + name + "\"?")
+                .setNegativeButton("Cancel", (d, w) ->
+                        adapter.notifyItemChanged(swipedPosition)
+                )
+                .setPositiveButton("Archive", (d, w) ->
+                        archiveTrip(trip.tripId)
+                )
                 .show();
     }
 
@@ -239,20 +277,16 @@ public class Home extends Fragment {
         Map<String, Object> updates = new HashMap<>();
         updates.put("is_archived", true);
         updates.put("archived_at", Timestamp.now());
-        updates.put("status", "ARCHIVED"); // optional, helpful label
+        updates.put("status", "ARCHIVED");
 
         db.collection("users")
                 .document(uid)
                 .collection("trips")
                 .document(tripId)
                 .update(updates)
-                .addOnSuccessListener(unused -> {
-                    Toast.makeText(getContext(), "Archived!", Toast.LENGTH_SHORT).show();
-                    // optional: open ArchiveActivity after archive
-                    if (getActivity() != null) {
-                        startActivity(new Intent(getActivity(), ArchiveActivity.class));
-                    }
-                })
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(getContext(), "Archived!", Toast.LENGTH_SHORT).show()
+                )
                 .addOnFailureListener(e ->
                         Toast.makeText(getContext(), "Archive failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
                 );

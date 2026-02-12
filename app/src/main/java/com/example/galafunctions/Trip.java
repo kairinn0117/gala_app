@@ -30,5 +30,6 @@ public class Trip {
     public String scheduled_time;
     public com.google.firebase.Timestamp ended_at;
 
+
     public Trip() {}
 }

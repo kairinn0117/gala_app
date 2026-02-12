@@ -13,7 +13,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdapter.VH> {
 
@@ -24,6 +29,9 @@ public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdap
     private final Context context;
     private final List<ScheduledTrip> list;
     private final OnTripClick listener;
+
+    // ✅ Force PH timezone
+    private static final TimeZone PH_TZ = TimeZone.getTimeZone("Asia/Manila");
 
     public ScheduledTripAdapter(Context context, List<ScheduledTrip> list, OnTripClick listener) {
         this.context = context;
@@ -54,6 +62,10 @@ public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdap
 
         h.tvScheduledWhen.setText(!when.isEmpty() ? ("Scheduled: " + when) : "Scheduled: —");
 
+        // ✅ STRICT OVERDUE (exact date+time only, PH timezone safe)
+        boolean overdue = isOverdue(t);
+        h.tvOverdue.setVisibility(overdue ? View.VISIBLE : View.GONE);
+
         if (!TextUtils.isEmpty(t.cover_url)) {
             Glide.with(h.imgCover.getContext())
                     .load(t.cover_url)
@@ -70,6 +82,62 @@ public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdap
         });
     }
 
+    // ✅ OVERDUE ONLY IF PAST EXACT DATE + TIME (PH)
+    private boolean isOverdue(ScheduledTrip t) {
+        long now = System.currentTimeMillis();
+
+        // 1) best: already computed exact millis
+        if (t.scheduled_sort_millis != null && t.scheduled_sort_millis > 0) {
+            return now > t.scheduled_sort_millis;
+        }
+
+        // 2) compute from date + time (STRICT: both required)
+        if (!TextUtils.isEmpty(t.scheduled_date) && !TextUtils.isEmpty(t.first_destination_time)) {
+            long computed = parseDateTimeMillisPH(t.scheduled_date, t.first_destination_time);
+            return computed > 0 && now > computed;
+        }
+
+        // 3) if time missing -> DO NOT mark overdue
+        return false;
+    }
+
+    // Combine "yyyy-MM-dd" + "hh:mm a" using PH timezone
+    private long parseDateTimeMillisPH(String dateStr, String timeStr) {
+        if (TextUtils.isEmpty(dateStr) || TextUtils.isEmpty(timeStr)) return -1;
+
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            dateFormat.setLenient(false);
+            dateFormat.setTimeZone(PH_TZ);
+
+            Date date = dateFormat.parse(dateStr);
+            if (date == null) return -1;
+
+            Calendar cal = Calendar.getInstance(PH_TZ);
+            cal.setTime(date);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+
+            SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+            timeFormat.setLenient(false);
+            timeFormat.setTimeZone(PH_TZ);
+
+            Date time = timeFormat.parse(timeStr.trim());
+            if (time == null) return -1;
+
+            Calendar timeCal = Calendar.getInstance(PH_TZ);
+            timeCal.setTime(time);
+
+            cal.set(Calendar.HOUR_OF_DAY, timeCal.get(Calendar.HOUR_OF_DAY));
+            cal.set(Calendar.MINUTE, timeCal.get(Calendar.MINUTE));
+
+            return cal.getTimeInMillis();
+
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
     @Override
     public int getItemCount() {
         return list.size();
@@ -77,7 +145,7 @@ public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdap
 
     static class VH extends RecyclerView.ViewHolder {
         ImageView imgCover;
-        TextView tvTripName, tvScheduledWhen, tvLocation;
+        TextView tvTripName, tvScheduledWhen, tvLocation, tvOverdue;
 
         VH(@NonNull View itemView) {
             super(itemView);
@@ -85,6 +153,7 @@ public class ScheduledTripAdapter extends RecyclerView.Adapter<ScheduledTripAdap
             tvTripName = itemView.findViewById(R.id.tvTripName);
             tvScheduledWhen = itemView.findViewById(R.id.tvScheduledWhen);
             tvLocation = itemView.findViewById(R.id.tvLocation);
+            tvOverdue = itemView.findViewById(R.id.tvOverdue);
         }
     }
 }

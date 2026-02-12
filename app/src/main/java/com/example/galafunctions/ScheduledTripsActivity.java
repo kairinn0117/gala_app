@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -45,6 +44,10 @@ public class ScheduledTripsActivity extends AppCompatActivity {
 
     private String searchQuery = "";
 
+    // ✅ ASC = nearest upcoming -> farthest
+    // ✅ DESC = farthest -> nearest
+    private boolean sortNearestFirst = true;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,7 +76,6 @@ public class ScheduledTripsActivity extends AppCompatActivity {
         adapter = new ScheduledTripAdapter(this, displayList, trip -> {
             if (trip == null || TextUtils.isEmpty(trip.tripId)) return;
 
-            // ✅ UPDATED: click -> TripActivity (not StartGala)
             Intent i = new Intent(ScheduledTripsActivity.this, TripActivity.class);
             i.putExtra("tripId", trip.tripId);
             startActivity(i);
@@ -81,9 +83,18 @@ public class ScheduledTripsActivity extends AppCompatActivity {
 
         rvScheduled.setAdapter(adapter);
 
-        btnFilter.setOnClickListener(v ->
-                Toast.makeText(this, "Filter next step.", Toast.LENGTH_SHORT).show()
-        );
+        // ✅ Filter button = toggle nearest/farthest
+        btnFilter.setOnClickListener(v -> {
+            sortNearestFirst = !sortNearestFirst;
+
+            Toast.makeText(
+                    this,
+                    sortNearestFirst ? "Showing nearest trips first" : "Showing farthest trips first",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            attachScheduledListener(); // re-query with new order
+        });
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -115,12 +126,16 @@ public class ScheduledTripsActivity extends AppCompatActivity {
         if (auth.getCurrentUser() == null) return;
         String uid = auth.getCurrentUser().getUid();
 
+        // ✅ Nearest first = ASC (small millis = nearer date)
+        // ✅ Farthest first = DESC
+        Query.Direction dir = sortNearestFirst ? Query.Direction.ASCENDING : Query.Direction.DESCENDING;
+
         listener = db.collection("users")
                 .document(uid)
                 .collection("trips")
                 .whereEqualTo("status", "SCHEDULED")
                 .whereEqualTo("is_archived", false)
-                .orderBy("scheduled_sort_millis", Query.Direction.ASCENDING)
+                .orderBy("scheduled_sort_millis", dir)
                 .addSnapshotListener((snap, e) -> {
                     if (e != null) {
                         Toast.makeText(this, "Load error: " + e.getMessage(), Toast.LENGTH_SHORT).show();

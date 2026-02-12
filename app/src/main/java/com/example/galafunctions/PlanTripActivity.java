@@ -1,7 +1,10 @@
 package com.example.galafunctions;
 
+import android.Manifest;
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -11,8 +14,11 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -21,14 +27,18 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 
 public class PlanTripActivity extends AppCompatActivity {
 
     public static final String EXTRA_TRIP_ID = "tripId";
+    private static final int REQ_POST_NOTIF = 1101;
 
     private EditText etPlanDate;
     private ImageButton btnCancel, btnSave;
@@ -38,12 +48,13 @@ public class PlanTripActivity extends AppCompatActivity {
 
     private String tripId;
 
-    private int pickedYear, pickedMonth, pickedDay;
     private boolean hasDate = false;
 
-    // ✅ for discard detection
     private String originalDate = "";
     private boolean isSaving = false;
+
+    // ✅ Force PH timezone
+    private static final TimeZone PH_TZ = TimeZone.getTimeZone("Asia/Manila");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,34 +85,39 @@ public class PlanTripActivity extends AppCompatActivity {
         btnCancel = findViewById(R.id.btnCancel);
         btnSave = findViewById(R.id.btnSaveSchedule);
 
-        // ✅ keep initial state (if may laman from xml or prefill someday)
         originalDate = safeText(etPlanDate);
 
         etPlanDate.setOnClickListener(v -> showDatePicker());
-
-        // ✅ Cancel now confirms if there are changes
         btnCancel.setOnClickListener(v -> confirmDiscardIfNeeded());
-
-        // ✅ Save now confirms
         btnSave.setOnClickListener(v -> confirmSaveSchedule());
 
-        // ✅ Back gesture confirm discard if may changes
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 confirmDiscardIfNeeded();
             }
         });
+
+        ensureNotificationPermission();
+    }
+
+    private void ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        REQ_POST_NOTIF
+                );
+            }
+        }
     }
 
     private void showDatePicker() {
-        Calendar c = Calendar.getInstance();
+        Calendar c = Calendar.getInstance(PH_TZ);
 
         DatePickerDialog dialog = new DatePickerDialog(this, (view, y, m, d) -> {
-
-            pickedYear = y;
-            pickedMonth = m;
-            pickedDay = d;
             hasDate = true;
 
             String pickedDate = String.format(Locale.getDefault(),
@@ -113,14 +129,9 @@ public class PlanTripActivity extends AppCompatActivity {
                 c.get(Calendar.MONTH),
                 c.get(Calendar.DAY_OF_MONTH));
 
-        // ✅ no past dates
         dialog.getDatePicker().setMinDate(System.currentTimeMillis());
         dialog.show();
     }
-
-    // -------------------------
-    // ✅ CONFIRMATIONS
-    // -------------------------
 
     private void confirmSaveSchedule() {
         if (auth.getCurrentUser() == null) {
@@ -160,7 +171,6 @@ public class PlanTripActivity extends AppCompatActivity {
 
     private boolean hasChanges() {
         String current = safeText(etPlanDate);
-        // if original empty then consider change if user picked a date
         if (TextUtils.isEmpty(originalDate)) {
             return hasDate && !TextUtils.isEmpty(current);
         }
@@ -172,8 +182,41 @@ public class PlanTripActivity extends AppCompatActivity {
     }
 
     // -------------------------
-    // ✅ SAVE (same logic mo)
+    // ✅ DATE -> MILLIS (PH)
     // -------------------------
+    private long parseDateAtPH(String dateStr, int hour, int minute) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            sdf.setLenient(false);
+            sdf.setTimeZone(PH_TZ);
+
+            Date d = sdf.parse(dateStr);
+            if (d == null) return -1;
+
+            Calendar c = Calendar.getInstance(PH_TZ);
+            c.setTime(d);
+            c.set(Calendar.HOUR_OF_DAY, hour);
+            c.set(Calendar.MINUTE, minute);
+            c.set(Calendar.SECOND, 0);
+            c.set(Calendar.MILLISECOND, 0);
+
+            return c.getTimeInMillis();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    // reminder 1: day before 8:00 AM (PH)
+    private long computeDayBefore8am(String dateStr) {
+        long sameDay8am = parseDateAtPH(dateStr, 8, 0);
+        if (sameDay8am <= 0) return -1;
+        return sameDay8am - (24L * 60 * 60 * 1000);
+    }
+
+    // reminder 2: same day 8:00 AM (PH)
+    private long computeSameDay8am(String dateStr) {
+        return parseDateAtPH(dateStr, 8, 0);
+    }
 
     private void saveSchedule() {
         if (auth.getCurrentUser() == null) {
@@ -198,7 +241,7 @@ public class PlanTripActivity extends AppCompatActivity {
         updates.put("scheduled_date", dateStr);
         updates.put("scheduled_at", Timestamp.now());
 
-        // NOTE: scheduled_time + scheduled_sort_millis will come from FIRST destination.
+        // these will be computed later based on first destination
         updates.put("scheduled_time", null);
         updates.put("scheduled_sort_millis", null);
         updates.put("first_destination_time", null);
@@ -210,6 +253,41 @@ public class PlanTripActivity extends AppCompatActivity {
                 .document(tripId)
                 .update(updates)
                 .addOnSuccessListener(unused -> {
+
+                    // ✅ instant notification
+                    NotificationUtils.showTripNotification(
+                            PlanTripActivity.this,
+                            tripId,
+                            "Trip scheduled ✅",
+                            "Your trip is set on " + dateStr
+                    );
+
+                    // ✅ reminder 1: day before 8AM (PH)
+                    long dayBefore = computeDayBefore8am(dateStr);
+                    if (dayBefore > 0) {
+                        ReminderScheduler.scheduleReminder(
+                                PlanTripActivity.this,
+                                tripId + "_daybefore",
+                                tripId,
+                                dayBefore,
+                                "GALA Reminder ⏰",
+                                "Tomorrow na yung trip mo (" + dateStr + ")."
+                        );
+                    }
+
+                    // ✅ reminder 2: same day 8AM (PH)
+                    long sameDay = computeSameDay8am(dateStr);
+                    if (sameDay > 0) {
+                        ReminderScheduler.scheduleReminder(
+                                PlanTripActivity.this,
+                                tripId + "_sameday",
+                                tripId,
+                                sameDay,
+                                "Trip starts today ✅",
+                                "Today yung trip mo (" + dateStr + "). Open your trip details."
+                        );
+                    }
+
                     Toast.makeText(this, "Trip scheduled date saved!", Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK, new Intent());
                     finish();
@@ -222,5 +300,16 @@ public class PlanTripActivity extends AppCompatActivity {
 
                     Toast.makeText(this, "Save failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_POST_NOTIF) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (!granted) {
+                Toast.makeText(this, "Notifications are off. Reminders may not show.", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }

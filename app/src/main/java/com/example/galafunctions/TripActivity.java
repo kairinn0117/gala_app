@@ -70,7 +70,9 @@ public class TripActivity extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        tripId = getIntent().getStringExtra("tripId");
+        // ✅ handle intent extras
+        handleIntent(getIntent());
+
         if (TextUtils.isEmpty(tripId)) {
             Toast.makeText(this, "Trip not found (missing tripId).", Toast.LENGTH_SHORT).show();
             finish();
@@ -125,7 +127,6 @@ public class TripActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // ✅ PLAN / RESCHEDULE with validation
         btnPlanTrip.setOnClickListener(v -> {
             if (!hasAtLeastOneDestination()) {
                 showNeedDestinationDialog("Plan Trip");
@@ -137,10 +138,7 @@ public class TripActivity extends AppCompatActivity {
             startActivity(i);
         });
 
-        // ✅ START / ACTIVATE / START NOW with validation
         btnStartTrip.setOnClickListener(v -> {
-            // template can be activated even without destinations? up to you.
-            // If you ALSO want to require destinations before activating, move the check above confirmActivateTrip.
             if (isTemplate) {
                 confirmActivateTrip();
                 return;
@@ -167,7 +165,38 @@ public class TripActivity extends AppCompatActivity {
         });
 
         loadTripDetails();
-        updateActionButtons(); // ✅ initial UI state
+        updateActionButtons();
+    }
+
+    // ✅ IMPORTANT: if TripActivity already open and you tap notif again
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+
+        if (!TextUtils.isEmpty(tripId)) {
+            loadTripDetails();
+        }
+    }
+
+    // ✅ read extras from notif
+    private void handleIntent(Intent intent) {
+        if (intent == null) return;
+
+        String incomingTripId = intent.getStringExtra("tripId");
+        if (!TextUtils.isEmpty(incomingTripId)) {
+            tripId = incomingTripId;
+        }
+
+        boolean fromNotif = intent.getBooleanExtra("from_notification", false);
+        boolean actionReady = intent.getBooleanExtra("action_ready", false);
+
+        if (fromNotif) {
+            Toast.makeText(this,
+                    actionReady ? "Ready mode: opening trip..." : "Opening trip from reminder...",
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -181,10 +210,6 @@ public class TripActivity extends AppCompatActivity {
         super.onStop();
         detachDestinationsListener();
     }
-
-    // -------------------------
-    // ✅ VALIDATION HELPERS
-    // -------------------------
 
     private boolean hasAtLeastOneDestination() {
         return destinationList != null && !destinationList.isEmpty();
@@ -206,21 +231,15 @@ public class TripActivity extends AppCompatActivity {
     private void updateActionButtons() {
         boolean hasDest = hasAtLeastOneDestination();
 
-        // template logic: activate can still be allowed even if no dest
         if (isTemplate) {
             if (btnPlanTrip != null) btnPlanTrip.setEnabled(false);
-            if (btnStartTrip != null) btnStartTrip.setEnabled(true); // Activate always allowed
+            if (btnStartTrip != null) btnStartTrip.setEnabled(true);
             return;
         }
 
-        // for normal trip, both need at least 1 destination
         if (btnPlanTrip != null) btnPlanTrip.setEnabled(hasDest);
         if (btnStartTrip != null) btnStartTrip.setEnabled(hasDest);
     }
-
-    // -------------------------
-    // LOAD TRIP DETAILS
-    // -------------------------
 
     private void loadTripDetails() {
         if (auth.getCurrentUser() == null) {
@@ -248,11 +267,9 @@ public class TripActivity extends AppCompatActivity {
                     String coverUrl = doc.getString("cover_url");
                     String category = doc.getString("trip_category");
 
-                    // planned fields (legacy)
                     String plannedDate = doc.getString("date");
                     String plannedTime = doc.getString("time");
 
-                    // scheduled fields (DATE ONLY + earliest destination time)
                     String scheduledDate = doc.getString("scheduled_date");
                     String firstTime = doc.getString("first_destination_time");
                     String fallbackScheduledTime = doc.getString("scheduled_time");
@@ -336,8 +353,6 @@ public class TripActivity extends AppCompatActivity {
                     if (!TextUtils.isEmpty(coverUrl)) loadImageFromUrl(coverUrl);
 
                     attachDestinationsListener();
-
-                    // ✅ update buttons after trip info load
                     updateActionButtons();
                 })
                 .addOnFailureListener(e ->
@@ -381,7 +396,6 @@ public class TripActivity extends AppCompatActivity {
                         tvEmptyDestinations.setVisibility(empty ? View.VISIBLE : View.GONE);
                     }
 
-                    // ✅ LIVE update buttons based on destination count
                     updateActionButtons();
                 });
     }
@@ -393,17 +407,12 @@ public class TripActivity extends AppCompatActivity {
         }
     }
 
-    // -------------------------
-    // ✅ START GALA CONFIRMATION
-    // -------------------------
-
     private void confirmStartGala() {
         if ("COMPLETED".equalsIgnoreCase(tripStatus)) {
             Toast.makeText(this, "This trip is already completed.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // extra safety: if list empty (shouldn't happen)
         if (!hasAtLeastOneDestination()) {
             showNeedDestinationDialog("Start Gala");
             return;
@@ -463,8 +472,6 @@ public class TripActivity extends AppCompatActivity {
                     btnPlanTrip.setVisibility(View.VISIBLE);
                     btnPlanTrip.setText("Plan Trip");
                     Toast.makeText(this, "Trip activated!", Toast.LENGTH_SHORT).show();
-
-                    // ✅ update button states now that template is off
                     updateActionButtons();
                 })
                 .addOnFailureListener(e -> {

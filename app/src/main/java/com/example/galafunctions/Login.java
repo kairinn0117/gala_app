@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,7 +22,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.GoogleAuthProvider;
@@ -32,9 +32,8 @@ public class Login extends AppCompatActivity {
     private GoogleSignInClient googleSignInClient;
 
     private EditText userField, passField;
-    private MaterialButton btnGoogle;
-    private android.widget.Button loginBtn;
-    private TextView goSignUp;
+    private ImageButton loginBtn, btnGoogle, btnSignUp;
+    private TextView goSignUpText;
 
     private final ActivityResultLauncher<Intent> googleLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -71,15 +70,21 @@ public class Login extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
-        // Views
+        // Views (MATCH XML TYPES)
         userField = findViewById(R.id.user_field);
         passField = findViewById(R.id.pass_field);
         loginBtn = findViewById(R.id.login_btn);
         btnGoogle = findViewById(R.id.btnGoogle);
-        goSignUp = findViewById(R.id.textView2);
+        btnSignUp = findViewById(R.id.imageButton);
+        goSignUpText = findViewById(R.id.textView2);
 
         // Text click -> SignUp
-        goSignUp.setOnClickListener(v -> startActivity(new Intent(Login.this, SignUp.class)));
+        goSignUpText.setOnClickListener(v ->
+                startActivity(new Intent(Login.this, SignUp.class)));
+
+        // ImageButton SignUp click
+        btnSignUp.setOnClickListener(v ->
+                startActivity(new Intent(Login.this, SignUp.class)));
 
         // Email/Password login
         loginBtn.setOnClickListener(v -> loginWithEmailPassword());
@@ -93,8 +98,7 @@ public class Login extends AppCompatActivity {
         googleSignInClient = GoogleSignIn.getClient(this, gso);
 
         btnGoogle.setOnClickListener(v ->
-                googleLauncher.launch(googleSignInClient.getSignInIntent())
-        );
+                googleLauncher.launch(googleSignInClient.getSignInIntent()));
     }
 
     @Override
@@ -107,7 +111,7 @@ public class Login extends AppCompatActivity {
     }
 
     private void loginWithEmailPassword() {
-        String email = userField.getText().toString().trim(); // treat your "username" as EMAIL
+        String email = userField.getText().toString().trim();
         String pass = passField.getText().toString().trim();
 
         if (TextUtils.isEmpty(email) || TextUtils.isEmpty(pass)) {
@@ -122,8 +126,7 @@ public class Login extends AppCompatActivity {
                     finish();
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(this, "Login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+                        Toast.makeText(this, "Login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     private void firebaseAuthWithGoogle(String idToken) {
@@ -136,7 +139,6 @@ public class Login extends AppCompatActivity {
                     finish();
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(this, "Google login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
-                );
+                        Toast.makeText(this, "Google login failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }
