@@ -14,17 +14,21 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class Settings extends Fragment {
 
     private ImageButton btnPersonalInfo, btnArchive, btnAbout, btnLogout;
+    private ImageButton imgProfile;
     private TextView userDisplay;
 
     private FirebaseAuth auth;
+    private FirebaseFirestore db;
     private GoogleSignInClient googleSignInClient;
 
     public Settings() {}
@@ -34,13 +38,15 @@ public class Settings extends Fragment {
         super.onCreate(savedInstanceState);
 
         auth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
 
-        googleSignInClient = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(requireContext(), gso);
+        googleSignInClient = com.google.android.gms.auth.api.signin.GoogleSignIn
+                .getClient(requireContext(), gso);
     }
 
     @Override
@@ -49,13 +55,21 @@ public class Settings extends Fragment {
 
         View v = inflater.inflate(R.layout.fragment_settings, container, false);
 
+        imgProfile = v.findViewById(R.id.imgProfile);
         btnPersonalInfo = v.findViewById(R.id.imageButton3);
         btnArchive = v.findViewById(R.id.imageButton4);
         btnAbout = v.findViewById(R.id.imageButton6);
         btnLogout = v.findViewById(R.id.imageButton7);
         userDisplay = v.findViewById(R.id.textView4);
 
-        displayUserInfo(); // 👈 show username/email
+        displayUserInfo();
+        loadProfilePhoto();
+
+        // 👇 tap profile -> open Personal Info
+        imgProfile.setOnClickListener(view -> {
+            if (getActivity() == null) return;
+            startActivity(new Intent(getActivity(), PersonalInformation.class));
+        });
 
         btnPersonalInfo.setOnClickListener(view -> {
             if (getActivity() == null) return;
@@ -95,6 +109,30 @@ public class Settings extends Fragment {
         } else {
             userDisplay.setText("User");
         }
+    }
+
+    private void loadProfilePhoto() {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return;
+
+        db.collection("users")
+                .document(user.getUid())
+                .get()
+                .addOnSuccessListener(doc -> {
+                    String url = doc.getString("profile_url");
+
+                    if (url != null && !url.trim().isEmpty()) {
+                        Glide.with(requireContext())
+                                .load(url)
+                                .circleCrop()
+                                .into(imgProfile);
+                    } else {
+                        imgProfile.setImageResource(R.drawable.circle_addpic);
+                    }
+                })
+                .addOnFailureListener(e ->
+                        imgProfile.setImageResource(R.drawable.circle_addpic)
+                );
     }
 
     private void showLogoutConfirm() {

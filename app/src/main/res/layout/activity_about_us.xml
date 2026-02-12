@@ -9,7 +9,7 @@
     tools:context=".AboutUs">
 
     <ImageButton
-        android:id="@+id/imageButton14"
+        android:id="@+id/btnBackAboutUs"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="26dp"
