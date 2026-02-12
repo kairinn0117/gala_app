@@ -12,7 +12,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 public class AboutUs extends AppCompatActivity {
 
-    private ImageButton imageButton14;
+    private ImageButton btnBackAboutUs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,10 +26,10 @@ public class AboutUs extends AppCompatActivity {
             return insets;
         });
 
-        btnBackAboutUs1 = findViewById(R.id.btnBackAboutUs);
+        btnBackAboutUs = findViewById(R.id.btnBackAboutUs);
 
         // ✅ ImageButton back
-        btnBackAboutUs1.setOnClickListener(v -> finish());
+        btnBackAboutUs.setOnClickListener(v -> finish());
 
         // ✅ Physical back button support (optional but clean)
         getOnBackPressedDispatcher().addCallback(this,
