@@ -26,7 +26,8 @@
         android:background="@android:color/transparent"
         android:src="@drawable/filter"
         android:contentDescription="Filter"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/ivTitle"
+        app:layout_constraintBottom_toBottomOf="@id/ivTitle"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <!-- Search Background Image -->
@@ -35,6 +36,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitXY"
+        android:contentDescription="Search Background"
         app:layout_constraintBottom_toBottomOf="@id/etSearchTemplates"
         app:layout_constraintEnd_toEndOf="@id/etSearchTemplates"
         app:layout_constraintStart_toStartOf="@id/etSearchTemplates"
@@ -46,14 +48,18 @@
         android:id="@+id/etSearchTemplates"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Search template gala"
         android:layout_marginTop="16dp"
         android:background="@android:color/transparent"
+        android:fontFamily="@font/inter"
+        android:hint="Search template gala"
+        android:importantForAutofill="no"
+        android:inputType="text"
         android:padding="12dp"
+        android:textColor="@color/black"
         android:textSize="14sp"
-        app:layout_constraintTop_toBottomOf="@id/ivTitle"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/ivTitle" />
 
     <TextView
         android:id="@+id/tvEmptyTemplates"
@@ -63,6 +69,7 @@
         android:alpha="0.7"
         android:visibility="gone"
         android:layout_marginTop="12dp"
+        android:fontFamily="@font/inter"
         app:layout_constraintTop_toBottomOf="@id/etSearchTemplates"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>

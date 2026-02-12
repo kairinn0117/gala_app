@@ -2,41 +2,55 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/tvTripTitle"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/header"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Trip Name"
-        android:textStyle="bold"
-        android:textSize="20sp"
+        android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <TextView
-        android:id="@+id/tvProgress"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Destination 1 of 5"
-        android:textSize="13sp"
-        android:layout_marginTop="6dp"
-        app:layout_constraintTop_toBottomOf="@id/tvTripTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        <TextView
+            android:id="@+id/tvTripTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Trip Name"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:fontFamily="@font/inter"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <TextView
+            android:id="@+id/tvProgress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Destination 1 of 5"
+            android:textSize="13sp"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/inter"
+            app:layout_constraintTop_toBottomOf="@id/tvTripTitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.cardview.widget.CardView
         android:id="@+id/cardCurrentDestination"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="8dp"
         app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
-        app:layout_constraintTop_toBottomOf="@id/tvProgress"
+        app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintBottom_toTopOf="@id/bottomBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -58,7 +72,8 @@
                     android:text="Current Destination"
                     android:textStyle="bold"
                     android:textSize="16sp"
-                    android:layout_marginBottom="12dp"/>
+                    android:layout_marginBottom="12dp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:id="@+id/tvDestName"
@@ -66,51 +81,57 @@
                     android:layout_height="wrap_content"
                     android:text="Destination Name"
                     android:textStyle="bold"
-                    android:textSize="18sp"/>
+                    android:textSize="18sp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:id="@+id/tvDestType"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Type: Tourist Spot"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:id="@+id/tvDestLocation"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Location: Boracay, Aklan"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:id="@+id/tvDestDateTime"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Time: 9:00 AM"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:id="@+id/tvDestBudget"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Budget: ₱1500"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Description"
                     android:textStyle="bold"
-                    android:layout_marginTop="12dp"/>
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="@font/inter"/>
 
                 <TextView
                     android:id="@+id/tvDestDescription"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="(Description here...)"
-                    android:layout_marginTop="6dp"/>
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="@font/inter"/>
 
-                <!-- ✅ WRAPPER: hide/show all extras in one go -->
                 <LinearLayout
                     android:id="@+id/layoutExtras"
                     android:layout_width="match_parent"
@@ -118,7 +139,6 @@
                     android:orientation="vertical"
                     android:layout_marginTop="12dp">
 
-                    <!-- Photo -->
                     <ImageView
                         android:id="@+id/imgDestPhoto"
                         android:layout_width="match_parent"
@@ -128,21 +148,23 @@
                         android:visibility="gone"
                         android:contentDescription="Destination photo"/>
 
-                    <Button
+                    <ImageButton
                         android:id="@+id/btnAddPhoto"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Add Photo"
-                        android:layout_marginTop="10dp"/>
+                        android:src="@drawable/addphoto1"
+                        android:background="@android:color/transparent"
+                        android:layout_marginTop="10dp"
+                        android:contentDescription="Add Photo" />
 
-                    <!-- Spent -->
                     <TextView
                         android:id="@+id/tvSpentSummary"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Spent: ₱0.00"
                         android:layout_marginTop="14dp"
-                        android:textStyle="bold"/>
+                        android:textStyle="bold"
+                        android:fontFamily="@font/inter"/>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -156,69 +178,80 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:background="@drawable/rounded_edittext"
+                            android:fontFamily="@font/inter"
                             android:hint="Enter amount spent"
-                            android:inputType="numberDecimal"/>
+                            android:importantForAutofill="no"
+                            android:inputType="numberDecimal"
+                            android:minHeight="48dp"
+                            android:padding="12dp"
+                            android:textColor="@color/black" />
 
-                        <Button
+                        <ImageButton
                             android:id="@+id/btnAddSpent"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Add"
-                            android:layout_marginStart="8dp"/>
+                            android:src="@drawable/addbtn1"
+                            android:background="@android:color/transparent"
+                            android:layout_marginStart="8dp"
+                            android:contentDescription="Add spent" />
                     </LinearLayout>
-
                 </LinearLayout>
-
             </LinearLayout>
         </ScrollView>
     </androidx.cardview.widget.CardView>
 
-    <LinearLayout
+    <HorizontalScrollView
         android:id="@+id/bottomBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
+        android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
-            android:id="@+id/btnBack"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Back" />
+            android:orientation="horizontal"
+            android:padding="16dp">
 
-        <Button
-            android:id="@+id/btnDirections"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Directions"
-            android:layout_marginStart="8dp" />
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/backtrip"
+                android:background="@android:color/transparent"
+                android:contentDescription="Back"/>
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+            <ImageButton
+                android:id="@+id/btnDirections"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/directionstrip"
+                android:background="@android:color/transparent"
+                android:layout_marginStart="16dp"
+                android:contentDescription="Directions"/>
 
-        <Button
-            android:id="@+id/btnEndTrip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="End Trip" />
+            <ImageButton
+                android:id="@+id/btnEndTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/endtrip"
+                android:background="@android:color/transparent"
+                android:layout_marginStart="16dp"
+                android:contentDescription="End Trip"/>
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+            <ImageButton
+                android:id="@+id/btnDoneNext"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/donennext"
+                android:background="@android:color/transparent"
+                android:layout_marginStart="16dp"
+                android:contentDescription="Done / Next"/>
 
-        <Button
-            android:id="@+id/btnDoneNext"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Done / Next" />
-    </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

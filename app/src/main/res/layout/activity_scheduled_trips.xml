@@ -2,12 +2,13 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- Back -->
+    <!-- Back Button -->
     <ImageButton
         android:id="@+id/btnBack"
         android:layout_width="40dp"
@@ -18,7 +19,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Title -->
+    <!-- Title Image -->
     <ImageView
         android:id="@+id/ivTitle"
         android:layout_width="wrap_content"
@@ -30,7 +31,7 @@
         app:layout_constraintBottom_toBottomOf="@id/btnBack"
         app:layout_constraintStart_toEndOf="@id/btnBack"/>
 
-    <!-- Filter -->
+    <!-- Filter Button -->
     <ImageButton
         android:id="@+id/btnFilter"
         android:layout_width="wrap_content"
@@ -48,27 +49,32 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitXY"
+        android:contentDescription="Search Background"
         app:layout_constraintBottom_toBottomOf="@id/etSearch"
         app:layout_constraintEnd_toEndOf="@id/etSearch"
         app:layout_constraintStart_toStartOf="@id/etSearch"
         app:layout_constraintTop_toTopOf="@id/etSearch"
         app:srcCompat="@drawable/searchbox" />
 
-    <!-- Search -->
+    <!-- Search Field -->
     <EditText
         android:id="@+id/etSearch"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Search scheduled trips"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="16dp"
         android:background="@android:color/transparent"
+        android:fontFamily="@font/inter"
+        android:hint="Search scheduled trips"
+        android:importantForAutofill="no"
+        android:inputType="text"
         android:padding="12dp"
+        android:textColor="@color/black"
         android:textSize="14sp"
-        app:layout_constraintTop_toBottomOf="@id/btnBack"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/btnBack" />
 
-    <!-- Empty -->
+    <!-- Empty Message -->
     <TextView
         android:id="@+id/tvEmpty"
         android:layout_width="0dp"
@@ -77,11 +83,12 @@
         android:alpha="0.7"
         android:visibility="gone"
         android:layout_marginTop="12dp"
+        android:fontFamily="@font/inter"
         app:layout_constraintTop_toBottomOf="@id/etSearch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Recycler -->
+    <!-- Trips RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvScheduled"
         android:layout_width="0dp"

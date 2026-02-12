@@ -4,11 +4,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.widget.ImageButton;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -24,8 +26,6 @@ public class DestinationsReportActivity extends AppCompatActivity {
     private FirebaseFirestore db;
 
     private String tripId;
-
-    private TextView tvTitle;
     private RecyclerView rvDestinations;
 
     private final ArrayList<Destination> list = new ArrayList<>();
@@ -36,6 +36,13 @@ public class DestinationsReportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_destinations_report);
+
+        // ✅ Handle window insets to prevent status bar overlap
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -50,15 +57,12 @@ public class DestinationsReportActivity extends AppCompatActivity {
         ImageButton btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
 
-        tvTitle = findViewById(R.id.tvTitle);
         rvDestinations = findViewById(R.id.rvDestinations);
-
         rvDestinations.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new DestinationSummaryAdapter(this, list, dest -> {
             if (dest == null) return;
 
-            // ✅ validation: no image
             if (TextUtils.isEmpty(dest.photo_url)) {
                 Toast.makeText(this, "No image", Toast.LENGTH_SHORT).show();
                 return;
@@ -72,23 +76,7 @@ public class DestinationsReportActivity extends AppCompatActivity {
 
         rvDestinations.setAdapter(adapter);
 
-        loadTripTitle();
         loadDestinations();
-    }
-
-    private void loadTripTitle() {
-        if (auth.getCurrentUser() == null) return;
-        String uid = auth.getCurrentUser().getUid();
-
-        db.collection("users")
-                .document(uid)
-                .collection("trips")
-                .document(tripId)
-                .get()
-                .addOnSuccessListener(doc -> {
-                    String name = doc.getString("trip_name");
-                    tvTitle.setText(!TextUtils.isEmpty(name) ? name : "Destinations");
-                });
     }
 
     private void loadDestinations() {

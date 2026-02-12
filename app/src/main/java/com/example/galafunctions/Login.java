@@ -2,6 +2,7 @@ package com.example.galafunctions;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -18,7 +19,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.GoogleAuthProvider;
@@ -52,12 +52,18 @@ public class Login extends AppCompatActivity {
 
         googleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // ✅ Google button (make sure this ID exists in your XML)
-        MaterialButton btnGoogle = findViewById(R.id.btnGoogle);
+        // ✅ UI bindings with ImageButton
+        ImageButton loginBtn = findViewById(R.id.login_btn);
+        ImageButton btnGoogle = findViewById(R.id.btnGoogle);
 
         btnGoogle.setOnClickListener(v -> {
             Intent signInIntent = googleSignInClient.getSignInIntent();
             startActivityForResult(signInIntent, RC_GOOGLE_SIGN_IN);
+        });
+
+        // Add dummy logic for login_btn if needed, or handle email/pass login here
+        loginBtn.setOnClickListener(v -> {
+            Toast.makeText(this, "Login clicked", Toast.LENGTH_SHORT).show();
         });
 
     }

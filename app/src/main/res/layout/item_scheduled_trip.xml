@@ -43,6 +43,7 @@
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:layout_marginStart="12dp"
+                android:fontFamily="@font/inter"
                 app:layout_constraintStart_toEndOf="@id/imgCover"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -55,6 +56,7 @@
                 android:textSize="12sp"
                 android:layout_marginStart="12dp"
                 android:layout_marginTop="4dp"
+                android:fontFamily="@font/inter"
                 app:layout_constraintStart_toEndOf="@id/imgCover"
                 app:layout_constraintTop_toBottomOf="@id/tvTripName"
                 app:layout_constraintEnd_toEndOf="parent" />
@@ -69,6 +71,7 @@
                 android:ellipsize="end"
                 android:layout_marginStart="12dp"
                 android:layout_marginTop="4dp"
+                android:fontFamily="@font/inter"
                 app:layout_constraintStart_toEndOf="@id/imgCover"
                 app:layout_constraintTop_toBottomOf="@id/tvScheduledWhen"
                 app:layout_constraintEnd_toEndOf="parent" />

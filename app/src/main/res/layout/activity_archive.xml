@@ -10,9 +10,9 @@
 
     <ImageView
         android:id="@+id/imageView3"
-        android:layout_width="185dp"
-        android:layout_height="40dp"
-        android:layout_marginTop="4dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="Archive Title"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/archive" />
@@ -21,12 +21,11 @@
         android:id="@+id/btnFilter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="15dp"
-        android:layout_marginEnd="5dp"
         android:background="@android:color/transparent"
         android:contentDescription="Filter"
+        app:layout_constraintBottom_toBottomOf="@id/imageView3"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/imageView3"
         app:srcCompat="@drawable/filter" />
 
     <!-- Search Background Image -->
@@ -35,6 +34,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitXY"
+        android:contentDescription="Search Box Background"
         app:layout_constraintBottom_toBottomOf="@id/etSearch"
         app:layout_constraintEnd_toEndOf="@id/etSearch"
         app:layout_constraintStart_toStartOf="@id/etSearch"
@@ -43,12 +43,18 @@
 
     <EditText
         android:id="@+id/etSearch"
-        android:layout_width="375dp"
-        android:layout_height="40dp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:background="@android:color/transparent"
+        android:fontFamily="@font/inter"
         android:hint="Search archived gala"
-        android:padding="12dp"
+        android:importantForAutofill="no"
+        android:inputType="text"
+        android:minHeight="40dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:textColor="@color/black"
         android:textSize="14sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -62,6 +68,7 @@
         android:alpha="0.7"
         android:text="No archived gala."
         android:visibility="gone"
+        android:fontFamily="@font/inter"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/etSearch" />

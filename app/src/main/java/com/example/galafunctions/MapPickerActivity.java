@@ -11,7 +11,7 @@ import android.text.TextUtils;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,7 +58,7 @@ public class MapPickerActivity extends AppCompatActivity {
 
     private TextView tvPickedAddress;
     private AutoCompleteTextView actSearchPlace;
-    private Button btnSearch, btnMyLocation, btnDirections;
+    private ImageButton btnSearch, btnMyLocation, btnDirections, btnCancel, btnUseLocation;
 
     private LatLng pickedLatLng = null;
     private String pickedAddress = "";
@@ -67,7 +67,6 @@ public class MapPickerActivity extends AppCompatActivity {
 
     private PlacesClient placesClient;
 
-    // store predictions so we can map clicked item -> placeId
     private final ArrayList<AutocompletePrediction> predictionList = new ArrayList<>();
     private ArrayAdapter<String> predictionsAdapter;
 
@@ -90,15 +89,15 @@ public class MapPickerActivity extends AppCompatActivity {
 
         // Bind views
         tvPickedAddress = findViewById(R.id.tvPickedAddress);
-        Button btnCancel = findViewById(R.id.btnCancel);
-        Button btnUseLocation = findViewById(R.id.btnUseLocation);
+        btnCancel = findViewById(R.id.btnCancel);
+        btnUseLocation = findViewById(R.id.btnUseLocation);
 
         actSearchPlace = findViewById(R.id.actSearchPlace);
         btnSearch = findViewById(R.id.btnSearch);
         btnMyLocation = findViewById(R.id.btnMyLocation);
         btnDirections = findViewById(R.id.btnDirections);
 
-        btnDirections.setEnabled(false);
+        updateDirectionsButton(false);
 
         btnCancel.setOnClickListener(v -> finish());
 
@@ -125,26 +124,22 @@ public class MapPickerActivity extends AppCompatActivity {
         }
         placesClient = Places.createClient(this);
 
-        // ✅ Setup adapter for dropdown
         predictionsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>());
         actSearchPlace.setAdapter(predictionsAdapter);
         actSearchPlace.setThreshold(2);
 
-        // ✅ typing -> fetch predictions -> show dropdown
         actSearchPlace.addTextChangedListener(SimpleTextWatcher.afterChanged(s -> {
             String q = s.toString().trim();
             if (q.length() < 2) return;
             fetchPredictions(q);
         }));
 
-        // ✅ clicking a suggestion
         actSearchPlace.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= predictionList.size()) return;
             AutocompletePrediction chosen = predictionList.get(position);
             fetchPlaceAndMove(chosen.getPlaceId(), chosen);
         });
 
-        // Search button: show dropdown if available
         btnSearch.setOnClickListener(v -> {
             if (!actSearchPlace.isPopupShowing()) actSearchPlace.showDropDown();
         });
@@ -157,31 +152,30 @@ public class MapPickerActivity extends AppCompatActivity {
             return false;
         });
 
-        // Map init
         SupportMapFragment mapFragment =
                 (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
-        if (mapFragment == null) {
-            Toast.makeText(this,
-                    "Map fragment not found. Check activity_map_picker.xml (id=@id/map)",
-                    Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        mapFragment.getMapAsync(googleMap -> {
-            mMap = googleMap;
-
-            LatLng manila = new LatLng(14.5995, 120.9842);
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(manila, 11f));
-
-            mMap.setOnMapClickListener(latLng -> {
-                // clear text-picked label if user taps map
-                pickedAddress = "";
-                onMapTapped(latLng);
+        if (mapFragment != null) {
+            mapFragment.getMapAsync(googleMap -> {
+                mMap = googleMap;
+                LatLng manila = new LatLng(14.5995, 120.9842);
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(manila, 11f));
+                mMap.setOnMapClickListener(latLng -> {
+                    pickedAddress = "";
+                    onMapTapped(latLng);
+                });
+                goToMyLocation();
             });
+        }
+    }
 
-            goToMyLocation();
-        });
+    private void updateDirectionsButton(boolean enabled) {
+        btnDirections.setEnabled(enabled);
+        if (enabled) {
+            btnDirections.setImageResource(R.drawable.directions);
+        } else {
+            btnDirections.setImageResource(R.drawable.directions_disabled);
+        }
     }
 
     private void fetchPredictions(String query) {
@@ -213,12 +207,9 @@ public class MapPickerActivity extends AppCompatActivity {
                     predictionsAdapter.addAll(display);
                     predictionsAdapter.notifyDataSetChanged();
 
-                    // show dropdown under the field
                     if (!display.isEmpty()) actSearchPlace.showDropDown();
                 })
-                .addOnFailureListener(e -> {
-                    // silent fail (avoid spam)
-                });
+                .addOnFailureListener(e -> {});
     }
 
     private void fetchPlaceAndMove(String placeId, AutocompletePrediction chosen) {
@@ -250,7 +241,6 @@ public class MapPickerActivity extends AppCompatActivity {
                     } else if (!TextUtils.isEmpty(address)) {
                         finalLabel = address;
                     } else {
-                        // fallback from prediction
                         finalLabel = chosen.getFullText(null) != null ? chosen.getFullText(null).toString() : "";
                     }
 
@@ -300,7 +290,6 @@ public class MapPickerActivity extends AppCompatActivity {
         if (marker != null) marker.remove();
         marker = mMap.addMarker(new MarkerOptions().position(latLng).title("Selected Location"));
 
-        // If pickedAddress already set by Places, keep it.
         if (TextUtils.isEmpty(pickedAddress)) {
             pickedAddress = reverseGeocode(latLng);
         }
@@ -312,7 +301,7 @@ public class MapPickerActivity extends AppCompatActivity {
             if (marker != null) marker.setTitle(pickedAddress);
         }
 
-        btnDirections.setEnabled(true);
+        updateDirectionsButton(true);
     }
 
     private String reverseGeocode(LatLng latLng) {

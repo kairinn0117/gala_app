@@ -23,7 +23,8 @@
             android:textStyle="bold"
             android:textSize="16sp"
             android:maxLines="1"
-            android:ellipsize="end"/>
+            android:ellipsize="end"
+            android:fontFamily="@font/inter"/>
 
         <TextView
             android:id="@+id/tvLine1"
@@ -31,7 +32,8 @@
             android:layout_height="wrap_content"
             android:text="Time: 9:00 AM • DONE"
             android:layout_marginTop="6dp"
-            android:alpha="0.85"/>
+            android:alpha="0.85"
+            android:fontFamily="@font/inter"/>
 
         <TextView
             android:id="@+id/tvLine2"
@@ -39,7 +41,8 @@
             android:layout_height="wrap_content"
             android:text="Spent: ₱0.00"
             android:layout_marginTop="6dp"
-            android:textStyle="bold"/>
+            android:textStyle="bold"
+            android:fontFamily="@font/inter"/>
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

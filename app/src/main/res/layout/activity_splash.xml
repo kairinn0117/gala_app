@@ -10,8 +10,8 @@
 
     <pl.droidsonroids.gif.GifImageView
         android:id="@+id/gifSplash"
-        android:layout_width="192dp"
-        android:layout_height="365dp"
+        android:layout_width="208dp"
+        android:layout_height="388dp"
         android:src="@drawable/gala_splashscreen"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

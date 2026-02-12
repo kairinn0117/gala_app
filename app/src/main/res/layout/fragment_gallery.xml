@@ -34,6 +34,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitXY"
+        android:contentDescription="Search Background"
         app:layout_constraintBottom_toBottomOf="@id/etGallerySearch"
         app:layout_constraintEnd_toEndOf="@id/etGallerySearch"
         app:layout_constraintStart_toStartOf="@id/etGallerySearch"
@@ -50,6 +51,7 @@
         android:background="@android:color/transparent"
         android:padding="12dp"
         android:textSize="14sp"
+        android:fontFamily="@font/inter"
         app:layout_constraintTop_toBottomOf="@id/ivGalleryTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -62,6 +64,7 @@
         android:alpha="0.7"
         android:visibility="gone"
         android:layout_marginTop="12dp"
+        android:fontFamily="@font/inter"
         app:layout_constraintTop_toBottomOf="@id/etGallerySearch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
