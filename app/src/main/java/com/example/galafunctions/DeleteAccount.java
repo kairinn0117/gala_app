@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,6 +18,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.bumptech.glide.Glide;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -34,11 +36,13 @@ import com.google.firebase.firestore.FirebaseFirestore;
 public class DeleteAccount extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
     private GoogleSignInClient googleSignInClient;
 
     private EditText etPassword;
     private ImageButton btnDelete, btnBack;
-    private TextView tvInfo;
+    private TextView tvInfo, tvUsername;
+    private ImageView imgProfile;
 
     private boolean isGoogleOnly = false;
 
@@ -91,11 +95,14 @@ public class DeleteAccount extends AppCompatActivity {
         });
 
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
 
         etPassword = findViewById(R.id.editTextText5);
         btnDelete = findViewById(R.id.imageButton15);
         btnBack = findViewById(R.id.imageButton18);
         tvInfo = findViewById(R.id.textView6);
+        tvUsername = findViewById(R.id.textView6); // Re-using for username display
+        imgProfile = findViewById(R.id.imageView);
 
         btnBack.setOnClickListener(v -> finish());
 
@@ -105,6 +112,12 @@ public class DeleteAccount extends AppCompatActivity {
             finish();
             return;
         }
+
+        // Display Username/Email
+        tvUsername.setText(user.getEmail());
+
+        // ✅ Load Profile Photo from Firestore
+        loadProfilePhoto(user.getUid());
 
         isGoogleOnly = isGoogleOnly(user);
 
@@ -118,22 +131,35 @@ public class DeleteAccount extends AppCompatActivity {
 
         // UI Behavior
         if (isGoogleOnly) {
-            // Hide password field for Google-only
             etPassword.setVisibility(View.GONE);
-            tvInfo.setText("To delete your Google account, please confirm using Google sign-in.");
+            tvInfo.setText("Confirm with Google to delete account.");
         } else {
             etPassword.setVisibility(View.VISIBLE);
-            tvInfo.setText("Enter your password to confirm deletion.");
+            tvInfo.setText("Enter password to confirm deletion.");
         }
 
         btnDelete.setOnClickListener(v -> {
             if (isGoogleOnly) {
-                // Launch Google re-auth
                 googleLauncher.launch(googleSignInClient.getSignInIntent());
             } else {
                 deleteWithPassword();
             }
         });
+    }
+
+    private void loadProfilePhoto(String uid) {
+        db.collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    String url = doc.getString("profile_url");
+                    if (url != null && !url.trim().isEmpty()) {
+                        Glide.with(DeleteAccount.this)
+                                .load(url)
+                                .circleCrop()
+                                .into(imgProfile);
+                    }
+                });
     }
 
     private void deleteWithPassword() {
@@ -161,18 +187,13 @@ public class DeleteAccount extends AppCompatActivity {
 
         String uid = user.getUid();
 
-        // Delete Firestore user doc (optional)
-        FirebaseFirestore.getInstance()
-                .collection("users")
+        db.collection("users")
                 .document(uid)
                 .delete()
                 .addOnCompleteListener(task -> {
-
                     user.delete()
                             .addOnSuccessListener(unused -> {
-
                                 Toast.makeText(this, "Account deleted.", Toast.LENGTH_SHORT).show();
-
                                 mAuth.signOut();
                                 if (googleSignInClient != null)
                                     googleSignInClient.signOut();

@@ -95,7 +95,7 @@
                 app:layout_constraintHorizontal_bias="0.496"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@+id/editTextText5"
-                app:layout_constraintVertical_bias="0.047"
+                app:layout_constraintVertical_bias="0.148"
                 app:srcCompat="@drawable/del_acc" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
